@@ -3,6 +3,8 @@
 Working notes, not a spec. Written alongside the prototype in this repo.
 Everything marked **Decision needed** is unresolved.
 
+Pitch deck structure lives separately in [`PITCH.md`](PITCH.md).
+
 ---
 
 ## 1. Where things stand today
@@ -197,21 +199,25 @@ In order. Cheapest and most informative first.
 1. **Walk a journey you built yourself.** Two checkpoints, your own audio, ten
    minutes. It is the exact flow you would demo, and the only part of the build
    nobody has tested.
-2. **Make one track on location.** Compose it where you stand, put it in the
+2. **Record a screen-capture video of a real walk.** Map moving, circle turning
+   orange, audio coming in. Two minutes. This product cannot be demonstrated
+   sitting down, and you will be pitching in a room — the video is the only
+   thing that solves that. Highest-value item on this list.
+3. **Make one track on location.** Compose it where you stand, put it in the
    app. Gives the strongest line available: *"this song did not exist before I
    stood here"* — then hand someone the phone in that place.
-3. **Read the Detour section** (section 7). Ten minutes. You will be asked
+4. **Read the Detour section** (section 7). Ten minutes. You will be asked
    about it, and the answer is written out there.
 
 **A decision only you can make:**
 
-4. **Pick which flavour leads the pitch** — capsule, friend's walk, or
+5. **Pick which flavour leads the pitch** — capsule, friend's walk, or
    institutional. All three can exist; the pitch needs one at the front and a
    reason for the order.
 
 **Costs money, so last:**
 
-5. **Decide whether to build the native app.** Skip while still pitching the
+6. **Decide whether to build the native app.** Skip while still pitching the
    concept — the web demo carries that. Spend the $99 when the question becomes
    whether MMRY is good to *use*, because phone-in-pocket is the only honest
    test and no browser can do it.
