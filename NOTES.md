@@ -15,6 +15,12 @@ Two pages are deployed from this repo:
 - **Journey builder** — `/builder.html` — place your own checkpoints, attach
   your own audio, walk it. Stored on the device only.
 
+Both the web pages and the native app share one visual language (tokens in
+`style.css` and `app/src/theme.js`). A **distance readout** shows how far the
+nearest checkpoint is while outside one — practical when walking, and it makes
+a filmed demo legible, because a viewer watches the number fall and then hears
+the sound start.
+
 What is proven **on real hardware, walked in the field**:
 
 - Live GPS tracking in a mobile browser
