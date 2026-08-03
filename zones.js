@@ -30,22 +30,14 @@ const ZONES = [
     audio: "audio/cisinitosteri.mp3",
     fadeMs: 1500,
   },
-  {
-    id: "zone-3",
-    name: "Zone 3 — Placeholder",
-    lat: 57.082058,
-    lng: 24.319797,
-    radius: 20,
-    audio: "audio/zone-3.wav",
-    fadeMs: 1500,
-  },
+  // Template for adding another zone — uncomment and fill in:
   // {
-  //   id: "zone-4",
-  //   name: "Zone 4 — Placeholder",
+  //   id: "zone-3",
+  //   name: "Zone 3",
   //   lat: 57.0000,
   //   lng: 24.0000,
   //   radius: 20,
-  //   audio: "audio/zone-4.mp3",
+  //   audio: "audio/your-file.mp3",
   //   fadeMs: 1500,
   // },
 ];
