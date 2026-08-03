@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>MMRY Soundwalk Demo</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,6 +15,7 @@
     <h1>MMRY Soundwalk</h1>
     <p>Put on headphones, then tap below and allow location access.</p>
     <button id="start-button" type="button">Start soundwalk</button>
+    <a id="builder-link" href="builder.html">Build your own journey →</a>
   </div>
 </div>
 
@@ -27,7 +28,8 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="engine.js"></script>
 <script src="zones.js"></script>
 <script src="app.js"></script>
 </body>

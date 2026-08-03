@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>MMRY — Journey Builder</title>
+
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body class="builder">
+
+<div id="map"></div>
+
+<div id="top-bar">
+  <input id="journey-name" type="text" placeholder="Untitled journey" />
+  <div id="mode-toggle">
+    <button id="mode-build" class="mode active" type="button">Build</button>
+    <button id="mode-walk" class="mode" type="button">Walk</button>
+  </div>
+</div>
+
+<div id="status-bar">
+  <div id="zone-indicator" class="no-zone">
+    <span id="zone-dot"></span>
+    <span id="zone-text">Build mode</span>
+  </div>
+</div>
+
+<!-- Build mode -->
+<div id="build-panel">
+  <div id="build-actions">
+    <button id="add-here" type="button">+ Add at my location</button>
+    <span class="hint">or tap the map</span>
+  </div>
+  <ul id="checkpoint-list"></ul>
+  <div id="file-actions">
+    <button id="export-journey" class="secondary" type="button">Export</button>
+    <button id="import-journey" class="secondary" type="button">Import</button>
+    <button id="clear-journey" class="danger" type="button">Clear all</button>
+    <input id="import-input" type="file" accept=".json,application/json" hidden />
+  </div>
+</div>
+
+<!-- Walk mode start gate -->
+<div id="start-overlay" class="hidden">
+  <div id="start-panel">
+    <h1 id="start-title">Ready to walk</h1>
+    <p>Put on headphones, then tap below and allow location access.</p>
+    <button id="start-button" type="button">Start walking</button>
+    <button id="back-to-build" class="linky" type="button">Back to building</button>
+  </div>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="engine.js"></script>
+<script src="storage.js"></script>
+<script src="builder.js"></script>
+</body>
+</html>

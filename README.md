@@ -5,13 +5,38 @@ few fixed "zones." Walk into a zone with your phone and an audio clip fades
 in; walk out and it fades out. No backend, no database, no build step —
 just static HTML/CSS/JS and Leaflet (loaded from a CDN).
 
+There are two pages:
+
+- **`index.html`** — the fixed demo. Zones hardcoded in `zones.js`. This is the
+  pitch demo.
+- **`builder.html`** — build your own journey. Drop checkpoints, attach audio
+  from your phone, then walk it. Everything is stored on the device.
+
 ## Structure
 
-- `index.html` — page shell (map + zone indicator)
-- `style.css` — minimal mobile-first styling
-- `zones.js` — **edit this** to set your real zone coordinates, radius, and audio files
-- `app.js` — map, geolocation tracking, distance/zone logic, audio fade
-- `audio/` — put your narration/music files here
+- `index.html` / `app.js` — fixed demo
+- `builder.html` / `builder.js` — journey builder
+- `engine.js` — shared distance maths and audio playback
+- `storage.js` — on-device journey storage (IndexedDB) plus export/import
+- `zones.js` — **edit this** to set the fixed demo's coordinates and audio
+- `style.css` — mobile-first styling for both pages
+- `audio/` — audio files used by the fixed demo
+- `vendor/leaflet/` — Leaflet, vendored rather than loaded from a CDN so the
+  demo cannot be broken by someone else's downtime
+
+## Using the journey builder
+
+**Build mode** — tap the map to place a checkpoint, or press *Add at my
+location*. Rename it, set its radius, and attach an audio file from your phone.
+Drag a marker to move it.
+
+**Walk mode** — tap *Walk*, then *Start walking*, and it behaves exactly like
+the fixed demo.
+
+Journeys are saved in the browser on that device. **They are not uploaded
+anywhere and do not sync between devices** — clearing your browser data deletes
+them. Use *Export* to save a journey as a file and *Import* to load it on
+another device; that is the only sharing mechanism until there is a backend.
 
 ## Setting up your real zones
 
