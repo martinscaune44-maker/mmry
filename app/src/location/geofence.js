@@ -1,5 +1,6 @@
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
+import { handleEnter, handleExit } from "../engine/session";
 
 // ---------------------------------------------------------------------------
 // Geofencing strategy — needs a development build; unavailable in Expo Go.
@@ -30,10 +31,18 @@ TaskManager.defineTask(GEOFENCE_TASK, ({ data, error }) => {
   const { eventType, region } = data || {};
   if (!region) return;
 
+  // Audio first, and independently of the UI handlers: this task may be running
+  // in a process iOS relaunched with no screen mounted at all.
   if (eventType === Location.GeofencingEventType.Enter) {
+    handleEnter(region.identifier).catch((err) =>
+      console.warn("Background enter failed:", err)
+    );
     handlers.onEnter?.(region.identifier);
     handlers.onActiveChange?.(region.identifier);
   } else if (eventType === Location.GeofencingEventType.Exit) {
+    handleExit(region.identifier).catch((err) =>
+      console.warn("Background exit failed:", err)
+    );
     handlers.onExit?.(region.identifier);
     handlers.onActiveChange?.(null);
   }

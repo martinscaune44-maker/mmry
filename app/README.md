@@ -97,13 +97,15 @@ src/screens/               build and walk screens
 
 ## Known gaps
 
-- **Audio from a cold background launch is unfinished.** Geofencing will wake
-  the app when a region is crossed, but if iOS relaunched it from terminated,
-  the audio session and clips are not restored. Needs work before background
-  triggering is genuinely reliable.
 - **iOS monitors at most 20 regions per app.** `MAX_REGIONS` in
   `geofence.js` registers only the nearest ones. Journeys longer than that
   need re-registration as the listener moves — not yet implemented.
+- **`bundleIdentifier` must be globally unique** before an App Store
+  submission. `com.mmry.app` may already be taken; change it in `app.json` if
+  Apple rejects it.
+- **Background triggering has never been tested**, because it needs a
+  development build. The code path exists and the audio is startable from a
+  cold launch, but nobody has walked it.
 - **Audio files live in the cache directory**, so the OS may evict them under
   storage pressure. Durable storage belongs in the Phase 2 backend.
 - **No sharing.** Same as the web version: one journey, one device.

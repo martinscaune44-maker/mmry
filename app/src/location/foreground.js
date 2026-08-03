@@ -1,5 +1,6 @@
 import * as Location from "expo-location";
 import { createZoneTracker } from "../engine/zoneTracker";
+import { handleEnter, handleExit } from "../engine/session";
 
 // ---------------------------------------------------------------------------
 // Foreground strategy — works everywhere, including Expo Go.
@@ -36,8 +37,16 @@ export function createForegroundTracker() {
             checkpoints
           );
 
-          entered.forEach((id) => handlers.onEnter?.(id));
-          exited.forEach((id) => handlers.onExit?.(id));
+          // Same path the background task takes, so a clip behaves identically
+          // whether the app is open or asleep.
+          entered.forEach((id) => {
+            handleEnter(id).catch((err) => console.warn("Enter failed:", err));
+            handlers.onEnter?.(id);
+          });
+          exited.forEach((id) => {
+            handleExit(id).catch((err) => console.warn("Exit failed:", err));
+            handlers.onExit?.(id);
+          });
           handlers.onActiveChange?.(activeId);
         }
       );

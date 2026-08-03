@@ -11,8 +11,11 @@ import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 const FADE_STEP_MS = 50;
 
 let players = {}; // checkpoint id -> { player, timer }
+let sessionConfigured = false;
 
 export async function configureAudioSession() {
+  if (sessionConfigured) return;
+
   await setAudioModeAsync({
     // Keeps audio running with the screen off — the whole point of the app.
     shouldPlayInBackground: true,
@@ -21,18 +24,26 @@ export async function configureAudioSession() {
     playsInSilentMode: true,
     interruptionMode: "doNotMix",
   });
+
+  sessionConfigured = true;
 }
 
-// sources: [{ id, uri }]
+// Creates a player only if one is missing, so it is safe to call on every zone
+// entry — including from a background task with no idea what came before.
+export function ensureClip(id, uri) {
+  if (players[id]) return;
+
+  const player = createAudioPlayer({ uri });
+  player.loop = false;
+  player.volume = 0;
+  players[id] = { player, timer: null };
+}
+
+// Preloads every clip up front. Only worth doing in the foreground, where the
+// listener is watching a screen and multi-megabyte files have time to buffer.
 export function loadClips(sources) {
   unloadAll();
-
-  sources.forEach(({ id, uri }) => {
-    const player = createAudioPlayer({ uri });
-    player.loop = false;
-    player.volume = 0;
-    players[id] = { player, timer: null };
-  });
+  sources.forEach(({ id, uri }) => ensureClip(id, uri));
 }
 
 export function fade(id, target, durationMs) {
@@ -77,4 +88,5 @@ export function unloadAll() {
     player.remove();
   });
   players = {};
+  sessionConfigured = false;
 }

@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import MapView, { Marker, Circle } from "react-native-maps";
 import { startTracking } from "../location";
-import { configureAudioSession, loadClips, fade, unloadAll } from "../engine/audio";
+import { configureAudioSession, loadClips, unloadAll } from "../engine/audio";
+import { primeJourney } from "../engine/session";
 
 export default function WalkScreen({ journey, region, setRegion }) {
   const [walking, setWalking] = useState(false);
@@ -37,15 +38,12 @@ export default function WalkScreen({ journey, region, setRegion }) {
       await configureAudioSession();
       loadClips(withAudio.map((cp) => ({ id: cp.id, uri: cp.audioUri })));
 
+      // Hand the journey to the session layer so background events can resolve
+      // checkpoints without a storage read.
+      primeJourney(journey);
+
+      // Playback is driven by the location layer now — these only move the UI.
       const tracker = await startTracking(journey.checkpoints, {
-        onEnter: (id) => {
-          const cp = findCheckpoint(id);
-          if (cp?.audioUri) fade(id, 1, cp.fadeMs);
-        },
-        onExit: (id) => {
-          const cp = findCheckpoint(id);
-          if (cp?.audioUri) fade(id, 0, cp.fadeMs);
-        },
         onActiveChange: setActiveId,
         onPosition: () => {},
       });
