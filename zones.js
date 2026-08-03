@@ -14,29 +14,29 @@
 const ZONES = [
   {
     id: "zone-1",
-    name: "Zone 1 — Placeholder",
-    lat: 57.0730,
-    lng: 24.3300,
+    name: "Test zone (start point)",
+    lat: 57.081058,
+    lng: 24.319797,
     radius: 20,
-    audio: "audio/zone-1.mp3",
+    audio: "audio/zone-1.wav",
     fadeMs: 1500,
   },
   {
     id: "zone-2",
     name: "Zone 2 — Placeholder",
-    lat: 57.0745,
-    lng: 24.3320,
+    lat: 57.081058,
+    lng: 24.320797,
     radius: 20,
-    audio: "audio/zone-2.mp3",
+    audio: "audio/zone-2.wav",
     fadeMs: 1500,
   },
   {
     id: "zone-3",
     name: "Zone 3 — Placeholder",
-    lat: 57.0715,
-    lng: 24.3340,
+    lat: 57.082058,
+    lng: 24.319797,
     radius: 20,
-    audio: "audio/zone-3.mp3",
+    audio: "audio/zone-3.wav",
     fadeMs: 1500,
   },
   // {
@@ -51,5 +51,5 @@ const ZONES = [
 ];
 
 // Map starting view (defaults to roughly the center of Ādaži, Latvia)
-const MAP_CENTER = { lat: 57.0730, lng: 24.3320 };
+const MAP_CENTER = { lat: 57.081058, lng: 24.319797 };
 const MAP_ZOOM = 16;
