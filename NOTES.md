@@ -7,10 +7,13 @@ Everything marked **Decision needed** is unresolved.
 
 ## 1. Where things stand today
 
-A working prototype lives in this repo and is deployed at
-`https://martinscaune44-maker.github.io/mmry/`.
+Two pages are deployed from this repo:
 
-What is proven, on real hardware, walked in the field:
+- **Fixed demo** — `/` — two real zones with real tracks. The pitch demo.
+- **Journey builder** — `/builder.html` — place your own checkpoints, attach
+  your own audio, walk it. Stored on the device only.
+
+What is proven **on real hardware, walked in the field**:
 
 - Live GPS tracking in a mobile browser
 - Zone entry triggers the right audio clip
@@ -18,8 +21,13 @@ What is proven, on real hardware, walked in the field:
 - Handoff from one zone to the next works
 - Runs on iPhone
 
-Two real zones are configured, each with its own track. Cost so far: nothing
-but time. No backend, no database, no accounts, no hosting bill.
+What is only proven **in a headless browser with mocked GPS** — works, but no
+human has walked it yet:
+
+- The journey builder: placing checkpoints, attaching audio, walking your own
+
+Cost so far: nothing but time. No backend, no database, no accounts, no
+hosting bill.
 
 **What this prototype cannot do** — and these shape everything below:
 
@@ -29,10 +37,13 @@ but time. No backend, no database, no accounts, no hosting bill.
 - **No offline support.** Audio is fetched over the network. Poor signal on a
   walk means no sound.
 - **Battery drain.** Continuous high-accuracy GPS is expensive.
-- **Nothing is user-created.** Zones are hardcoded in `zones.js`.
+- **No sharing or sync.** Built journeys live in one browser on one device.
+  Export/import files are the only way to move them.
+- **Browser storage is not durable.** iOS can evict a site's stored data after
+  a period without visits. Fine for demos; fatal for anything promising to
+  keep a memory safe. This is why the time capsule cannot be device-local.
 
-The first three are why a serious version eventually needs a native app. The
-fourth is the next thing to build.
+These are why a serious version eventually needs a native app and a backend.
 
 ---
 
@@ -78,23 +89,21 @@ here. Save it for when that is true.
 Fixed zones, hardcoded, walked and verified. This is enough to demo the core
 experience in a pitch today.
 
-### Phase 1 — Journey builder, no backend
+### Phase 1 — Journey builder, no backend ✅ built, not yet field-tested
 
-Goal: a person can build their own walk without anyone's help.
-
-1. Map screen with an "add checkpoint" mode — tap the map, or drop a pin at
-   current location
-2. Attach audio per checkpoint from the phone's own files
-3. Name each checkpoint, set its radius
-4. Save to browser storage (IndexedDB) so it survives closing the tab
-5. Switch between "build" and "walk" modes
-6. Export a journey to a file, import from a file — crude sharing, no server
+All of it shipped: checkpoints placed by map tap or GPS, draggable markers,
+per-checkpoint name and radius, audio attached from local files, saved to
+IndexedDB, build/walk mode toggle, export and import as a file.
 
 Still free to run. Still no accounts. Enough to demo all three concepts on
 stage, since a capsule, a friend's walk and a museum tour are the same thing
 with different content in them.
 
-**Rough effort:** comparable to what has been built so far.
+**Outstanding:** nobody has walked a self-built journey on a real phone. That
+is the next thing to do and it costs nothing.
+
+Leaflet is vendored into `vendor/` rather than loaded from a CDN — a map
+library failing to load mid-pitch would take the whole demo down.
 
 ### Phase 2 — Accounts, storage, real sharing
 
@@ -132,6 +141,25 @@ native Swift/Kotlin. Cross-platform is almost certainly right at this stage.
 This is the point where the product becomes something people can use on a real
 walk rather than a demo they hold in their hand.
 
+**What it actually costs to start:**
+
+- **Apple Developer Program, $99/year.** Unavoidable for putting an app on an
+  iPhone in any lasting way. This is the real gate.
+- **Google Play, $25 one-time** — and Android needs no account at all just to
+  install a build on your own device. Testing background location on Android
+  is nearly free. *No Android device available, so this route is closed for
+  now.*
+- **Expo** is the sensible path: one codebase, cloud builds so no Mac is
+  required, install by scanning a QR code. Background location needs a
+  development build rather than the simpler Expo Go app — which is exactly
+  where the Apple account becomes necessary.
+- **App Store review** takes days to weeks, and background location draws
+  extra scrutiny. Apple wants a written justification for tracking with the
+  screen off.
+
+The fiddly logic — distance maths, the enter/exit state machine, the fade
+behaviour, the iOS audio quirks — is already solved and ports over.
+
 ### Phase 4 — Institutional sales
 
 The same product, sold rather than posted.
@@ -160,7 +188,36 @@ investors find the achievable version more credible.
 
 ---
 
-## 5. Open questions
+## 5. What to do next
+
+In order. Cheapest and most informative first.
+
+**Free, this week:**
+
+1. **Walk a journey you built yourself.** Two checkpoints, your own audio, ten
+   minutes. It is the exact flow you would demo, and the only part of the build
+   nobody has tested.
+2. **Make one track on location.** Compose it where you stand, put it in the
+   app. Gives the strongest line available: *"this song did not exist before I
+   stood here"* — then hand someone the phone in that place.
+3. **Read up on Detour** (section 7). Thirty minutes. You will be asked.
+
+**A decision only you can make:**
+
+4. **Pick which flavour leads the pitch** — capsule, friend's walk, or
+   institutional. All three can exist; the pitch needs one at the front and a
+   reason for the order.
+
+**Costs money, so last:**
+
+5. **Decide whether to build the native app.** Skip while still pitching the
+   concept — the web demo carries that. Spend the $99 when the question becomes
+   whether MMRY is good to *use*, because phone-in-pocket is the only honest
+   test and no browser can do it.
+
+---
+
+## 6. Open questions
 
 - Which flavour leads the pitch?
 - Free, paid, or freemium — and if paid, does the creator or the walker pay?
@@ -171,7 +228,7 @@ investors find the achievable version more credible.
 
 ---
 
-## 6. Precedents worth knowing
+## 7. Precedents worth knowing
 
 **Detour** — Andrew Mason's post-Groupon startup, location-triggered audio
 walking tours, well funded and well made. Struggled as a consumer product,
@@ -198,7 +255,7 @@ before committing to it in branding.
 
 ---
 
-## 7. Shelved: the hardware album
+## 8. Shelved: the hardware album
 
 A limited-edition player shipping with an album recorded on location, each
 track geotagged where it was made.
