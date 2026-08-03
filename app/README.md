@@ -25,19 +25,24 @@ No Apple account needed.
 
 ### A note on SDK versions
 
-The project targets **Expo SDK 56**, not the newest SDK. This is deliberate:
-the App Store build of Expo Go trails the latest SDK release, and a project
-built against a newer SDK than Expo Go ships with fails with *"Project is
-incompatible with this version of Expo Go."*
+The project targets **Expo SDK 54**, not the newest SDK. This is deliberate: a
+project built against a newer SDK than the installed Expo Go fails with
+*"Project is incompatible with this version of Expo Go."*
 
-Before bumping the SDK, check what the store client actually runs:
+**Read the number off the phone, not off the internet.** In Expo Go: Settings
+tab → App Info → **Supported SDK**. That single number decides everything.
+Neither npm's `latest` nor the version the App Store advertises is reliable —
+Expo Go installs can sit several SDKs behind what the store claims to ship.
+
+If that number ever changes — Expo Go updating itself, for instance — this
+project stops loading until `package.json` is re-pinned to match. Expo's
+per-SDK module versions live at:
 
 ```
-curl -s https://api.expo.dev/v2/versions/latest
+https://raw.githubusercontent.com/expo/expo/sdk-<N>/packages/expo/bundledNativeModules.json
 ```
 
-`iosVersion` is the Expo Go version on the App Store. Match the project to the
-SDK that version supports, not to whatever npm calls `latest`.
+Use those exact versions rather than picking packages individually.
 
 This constraint disappears once you move to a development build in Stage B —
 that build embeds your chosen SDK, so you are no longer waiting on Apple's
