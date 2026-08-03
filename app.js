@@ -29,9 +29,11 @@ ZONES.forEach((zone) => {
 
   const marker = L.marker([zone.lat, zone.lng]).addTo(map).bindPopup(zone.name);
 
+  // Clips are fetched ahead of time rather than on zone entry: tracks can be
+  // several MB, and downloading on arrival would delay playback over mobile data.
   const audio = new Audio(zone.audio);
   audio.loop = false;
-  audio.preload = "none";
+  audio.preload = "auto";
 
   // Tracks play once and stop. Rewind when finished so that leaving and
   // re-entering the zone starts the clip from the beginning again.

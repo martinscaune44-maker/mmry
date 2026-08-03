@@ -14,11 +14,11 @@
 const ZONES = [
   {
     id: "zone-1",
-    name: "Test zone (start point)",
+    name: "Zone 1",
     lat: 57.081058,
     lng: 24.319797,
     radius: 20,
-    audio: "audio/zone-1.wav",
+    audio: "audio/xyv.mp3",
     fadeMs: 1500,
   },
   {
