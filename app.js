@@ -41,7 +41,7 @@ ZONES.forEach((zone) => {
     audio.currentTime = 0;
   });
 
-  zoneState[zone.id] = { zone, circle, marker, audio, inside: false, volume: 0 };
+  zoneState[zone.id] = { zone, circle, marker, audio, inside: false, desiredPlaying: false };
 });
 
 // Fit map to show all zones if there are any
@@ -69,39 +69,61 @@ function distanceMeters(lat1, lng1, lat2, lng2) {
 }
 
 // ---- Audio fade helpers -----------------------------------------------------
+// iOS ignores writes to HTMLMediaElement.volume — it treats output level as
+// hardware-controlled only. Every clip is therefore routed through a Web Audio
+// gain node, which iOS does honour, and all fading is done on that gain.
+
+let audioCtx = null;
+
+function setupAudioGraph() {
+  if (audioCtx) return;
+
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  audioCtx = new Ctx();
+
+  Object.values(zoneState).forEach((state) => {
+    const source = audioCtx.createMediaElementSource(state.audio);
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0;
+    source.connect(gain);
+    gain.connect(audioCtx.destination);
+    state.gain = gain;
+  });
+}
 
 function fadeAudio(state, targetVolume, durationMs) {
   const audio = state.audio;
+  const gain = state.gain;
+  const now = audioCtx.currentTime;
 
-  if (targetVolume > 0 && audio.paused) {
-    audio.volume = 0;
-    audio.play().catch((err) => {
-      console.warn(`Could not play ${state.zone.audio}:`, err);
-    });
+  gain.gain.cancelScheduledValues(now);
+  gain.gain.setValueAtTime(gain.gain.value, now);
+  gain.gain.linearRampToValueAtTime(targetVolume, now + durationMs / 1000);
+
+  if (state.stopTimer) {
+    clearTimeout(state.stopTimer);
+    state.stopTimer = null;
   }
 
-  const startVolume = audio.volume;
-  const startTime = performance.now();
-
-  if (state.fadeRaf) cancelAnimationFrame(state.fadeRaf);
-
-  function step(now) {
-    const elapsed = now - startTime;
-    const t = Math.min(elapsed / durationMs, 1);
-    audio.volume = startVolume + (targetVolume - startVolume) * t;
-
-    if (t < 1) {
-      state.fadeRaf = requestAnimationFrame(step);
-    } else {
-      state.fadeRaf = null;
-      if (targetVolume === 0) {
+  if (targetVolume > 0) {
+    state.desiredPlaying = true;
+    if (audio.paused) {
+      audio.play().catch((err) => {
+        console.warn(`Could not play ${state.zone.audio}:`, err);
+      });
+    }
+  } else {
+    // Let the fade finish before pausing, and re-check the flag in case the
+    // listener stepped back into the zone while it was still fading out.
+    state.desiredPlaying = false;
+    state.stopTimer = setTimeout(() => {
+      if (!state.desiredPlaying) {
         audio.pause();
         audio.currentTime = 0;
       }
-    }
+      state.stopTimer = null;
+    }, durationMs);
   }
-
-  state.fadeRaf = requestAnimationFrame(step);
 }
 
 // ---- Zone indicator UI ------------------------------------------------------
@@ -187,12 +209,15 @@ function onPositionError(err) {
 function primeAudio() {
   Object.values(zoneState).forEach((state) => {
     const audio = state.audio;
-    audio.volume = 0;
     audio
       .play()
       .then(() => {
-        audio.pause();
-        audio.currentTime = 0;
+        // A zone may have triggered a real playback before this resolved —
+        // only pause clips that nothing is actually asking to hear.
+        if (!state.desiredPlaying) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
       })
       .catch(() => {
         /* Clip missing or not yet loadable — it will retry on zone entry. */
@@ -215,6 +240,9 @@ function startTracking() {
 
 document.getElementById("start-button").addEventListener("click", () => {
   document.getElementById("start-overlay").classList.add("hidden");
+  setupAudioGraph();
+  // iOS creates the context suspended; it can only be resumed from a gesture.
+  if (audioCtx.state === "suspended") audioCtx.resume();
   primeAudio();
   startTracking();
   map.invalidateSize();
