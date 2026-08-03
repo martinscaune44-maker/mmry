@@ -128,7 +128,7 @@ the two current tracks are 8MB and 6.5MB.
 track at 256kbps is ~8MB; at 128kbps it is half that, with little audible
 difference outdoors.
 
-### Phase 3 — Native app 🚧 scaffolded, never run
+### Phase 3 — Native app 🚧 runs on device, walk not yet verified
 
 Expo app lives in [`app/`](app/). Map, journey builder, zone-triggered audio
 with fades — the web prototype's behaviour, natively.
@@ -145,11 +145,20 @@ It tries geofencing and falls back to foreground polling, so **Stage B is a
 build command, not a rewrite**. The background config in `app.json` is already
 written and simply inert until then.
 
-**Caveat: none of it has run on a phone.** It is written against documented
-SDK 57 APIs and parses, but nothing more. Expect version friction on first
-install — `npx expo install --fix` is step one. Known gaps are listed in
-`app/README.md`; the significant one is that audio after a cold background
-launch is unfinished.
+**Status:** launches in Expo Go on an iPhone 12 mini (iOS 26.5). Crashed on
+first load, worked on retry — unexplained, probably the initial bundle compile
+timing out, but capture the error if it recurs. Whether a walk actually
+triggers audio is still unverified.
+
+**The SDK number is the thing that matters.** Expo Go only runs projects built
+for the exact SDK it supports, and that number is printed in the app itself
+(Settings → App Info → Supported SDK). It is not npm's `latest`, and not what
+the App Store advertises — this device sat on SDK 54 while the store claimed to
+ship 57. Getting this wrong costs an hour and produces a misleading error
+telling you to update an app that is already current.
+
+Known gaps are listed in `app/README.md`; the significant one is that audio
+after a cold background launch is unfinished.
 
 Triggered by the platform limits in section 1, not by ambition. Needed for:
 
