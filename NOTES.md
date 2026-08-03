@@ -200,7 +200,8 @@ In order. Cheapest and most informative first.
 2. **Make one track on location.** Compose it where you stand, put it in the
    app. Gives the strongest line available: *"this song did not exist before I
    stood here"* — then hand someone the phone in that place.
-3. **Read up on Detour** (section 7). Thirty minutes. You will be asked.
+3. **Read the Detour section** (section 7). Ten minutes. You will be asked
+   about it, and the answer is written out there.
 
 **A decision only you can make:**
 
@@ -230,11 +231,58 @@ In order. Cheapest and most informative first.
 
 ## 7. Precedents worth knowing
 
-**Detour** — Andrew Mason's post-Groupon startup, location-triggered audio
-walking tours, well funded and well made. Struggled as a consumer product,
-pivoted toward licensing to cities and museums, sold to Bose around 2018. The
-single most relevant precedent here. Its lesson: the consumer version was hard,
-the institutional version had the value. Expect to be asked about it.
+### Detour — the one to actually understand
+
+The single most relevant precedent. Expect to be asked about it. Verified
+details, since the summary version gets it wrong:
+
+- Founded by **Andrew Mason** after he was ousted from Groupon. Launched in
+  San Francisco in **2015**. GPS-triggered narrated walking tours — functionally
+  the same core mechanic as this repo.
+- **Self-funded by Mason personally**, not venture-backed. This matters: it was
+  not a case of burning someone else's money badly.
+- Genuinely well made. Group sync so several people could walk in step.
+  Roughly **120 tours** by the end — San Francisco, Austin, NYC, London, Paris,
+  Berlin — sold as individual in-app purchases.
+- **What killed it was discovery.** It ranked in the **400s–700s of the App
+  Store's Travel category** — TechCrunch called it "practically invisible." Not
+  a bad product. A good one nobody encountered.
+- **It did pivot to institutions.** *Detour Platform* launched 2016: white-label
+  creation tools for third parties, first partner **SFMOMA**, using WiFi indoor
+  positioning inside the museum. The same idea as Phase 4 here. It was found,
+  but not early enough or not big enough.
+- **Bose acquired it in April 2018 — software and tour content only, not the
+  team.** The app was pulled on 31 May 2018. Bose wanted it for their audio AR
+  platform (the sensor-equipped Frames glasses). Note the buyer was a *hardware*
+  company shopping for spatial audio content.
+- **The twist:** the internal audio-editing tooling built to produce the tours
+  spun out as **Descript**, raised $5M from Andreessen Horowitz, and became far
+  bigger than Detour ever was. The byproduct beat the product. Audio
+  *production* turned out to be a larger problem than audio *delivery*.
+
+**The objection this creates:** "Detour did this, better executed, and died."
+
+**The answer:** Detour's fatal flaw was distribution — a stranger had to go
+looking for a walking tour app and somehow find them. The friend's-walk model
+has distribution built into the product: every journey created arrives with at
+least one person personally motivated to install it, because someone they know
+made it for them. That is not a growth tactic bolted on afterwards; it is the
+shape of the thing. Detour was a catalogue you had to discover.
+
+**Second difference:** Detour's content was professionally produced, so 120
+tours cost enormous effort. User-generated content is nearly free to scale, at
+the price of variable quality. A different and cheaper problem.
+
+**The real thing to worry about:** Descript's lesson. If making good geo-audio
+turns out to be harder than playing it back, the value may sit in the creation
+tools rather than the map.
+
+Sources: [TechCrunch](https://techcrunch.com/2018/04/24/bose-acquires-andrew-masons-walking-tour-startup-detour),
+[Detour Platform / SFMOMA](https://www.prnewswire.com/news-releases/detour-launches-platform-for-museums-and-other-content-creators-partners-with-sfmoma-300261645.html),
+[Fast Company](https://www.fastcompany.com/3047327/detour-the-walking-tour-audio-app-rolls-out-stories-in-6-new-cities),
+[Hacker News on the shutdown](https://news.ycombinator.com/item?id=16908409)
+
+### Others
 
 **VoiceMap, izi.TRAVEL** — existing audio walking tour platforms, surviving
 largely on institutional customers. Same conclusion from a different angle.
