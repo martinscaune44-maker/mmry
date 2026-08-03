@@ -23,11 +23,11 @@ const ZONES = [
   },
   {
     id: "zone-2",
-    name: "Zone 2 — Placeholder",
-    lat: 57.081058,
-    lng: 24.320797,
+    name: "Zone 2",
+    lat: 57.0818588,
+    lng: 24.3210157,
     radius: 20,
-    audio: "audio/zone-2.wav",
+    audio: "audio/cisinitosteri.mp3",
     fadeMs: 1500,
   },
   {
