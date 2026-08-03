@@ -23,9 +23,25 @@ No Apple account needed.
 
 4. Scan the QR code with your iPhone camera. The app opens in Expo Go.
 
-`npx expo install --fix` reconciles package versions with the installed SDK.
-Run it first if anything looks wrong — the versions pinned in `package.json`
-were written by hand and may drift.
+### A note on SDK versions
+
+The project targets **Expo SDK 56**, not the newest SDK. This is deliberate:
+the App Store build of Expo Go trails the latest SDK release, and a project
+built against a newer SDK than Expo Go ships with fails with *"Project is
+incompatible with this version of Expo Go."*
+
+Before bumping the SDK, check what the store client actually runs:
+
+```
+curl -s https://api.expo.dev/v2/versions/latest
+```
+
+`iosVersion` is the Expo Go version on the App Store. Match the project to the
+SDK that version supports, not to whatever npm calls `latest`.
+
+This constraint disappears once you move to a development build in Stage B —
+that build embeds your chosen SDK, so you are no longer waiting on Apple's
+review queue for someone else's app.
 
 **What works in Stage A:** the map, building journeys, attaching audio, and
 zone triggering while the app is open and the screen is on.
