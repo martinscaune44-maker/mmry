@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   StyleSheet,
 } from "react-native";
@@ -11,11 +11,13 @@ import MapView, { Marker, Circle } from "react-native-maps";
 import * as Location from "expo-location";
 import * as DocumentPicker from "expo-document-picker";
 import { newCheckpointId } from "../storage/journeys";
+import { colors, radius, space, type, shadow, darkMapStyle } from "../theme";
 
 const DEFAULT_RADIUS = 20;
 const DEFAULT_FADE_MS = 1500;
 
 export default function BuildScreen({ journey, setJourney, region, setRegion }) {
+  const [locating, setLocating] = useState(false);
   const update = (next) => setJourney({ ...journey, ...next });
 
   const addCheckpoint = (lat, lng) => {
@@ -37,18 +39,23 @@ export default function BuildScreen({ journey, setJourney, region, setRegion }) 
   };
 
   const addHere = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") return;
-    const pos = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-    addCheckpoint(pos.coords.latitude, pos.coords.longitude);
-    setRegion({
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      latitudeDelta: 0.004,
-      longitudeDelta: 0.004,
-    });
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      addCheckpoint(pos.coords.latitude, pos.coords.longitude);
+      setRegion({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        latitudeDelta: 0.004,
+        longitudeDelta: 0.004,
+      });
+    } finally {
+      setLocating(false);
+    }
   };
 
   const pickAudio = async (id) => {
@@ -58,11 +65,7 @@ export default function BuildScreen({ journey, setJourney, region, setRegion }) 
     });
     if (result.canceled) return;
     const file = result.assets[0];
-    update({
-      checkpoints: journey.checkpoints.map((cp) =>
-        cp.id === id ? { ...cp, audioUri: file.uri, audioName: file.name } : cp
-      ),
-    });
+    editCheckpoint(id, { audioUri: file.uri, audioName: file.name });
   };
 
   const editCheckpoint = (id, changes) => {
@@ -84,6 +87,9 @@ export default function BuildScreen({ journey, setJourney, region, setRegion }) 
         region={region}
         onRegionChangeComplete={setRegion}
         showsUserLocation
+        showsMyLocationButton={false}
+        customMapStyle={darkMapStyle}
+        userInterfaceStyle="dark"
         onPress={(e) => {
           const { latitude, longitude } = e.nativeEvent.coordinate;
           addCheckpoint(latitude, longitude);
@@ -94,8 +100,9 @@ export default function BuildScreen({ journey, setJourney, region, setRegion }) 
             <Circle
               center={{ latitude: cp.lat, longitude: cp.lng }}
               radius={cp.radius}
-              strokeColor="#3388ff"
-              fillColor="rgba(51,136,255,0.15)"
+              strokeColor={colors.zone}
+              strokeWidth={2}
+              fillColor={colors.zoneFill}
             />
             <Marker
               coordinate={{ latitude: cp.lat, longitude: cp.lng }}
@@ -111,26 +118,38 @@ export default function BuildScreen({ journey, setJourney, region, setRegion }) 
       </MapView>
 
       <View style={styles.panel}>
-        <TextInput
-          style={styles.journeyName}
-          placeholder="Untitled journey"
-          placeholderTextColor="#777"
-          value={journey.name}
-          onChangeText={(name) => update({ name })}
-        />
+        <View style={styles.grabber} />
+
+        <View style={styles.panelHead}>
+          <TextInput
+            style={styles.journeyName}
+            placeholder="Untitled journey"
+            placeholderTextColor={colors.textFaint}
+            value={journey.name}
+            onChangeText={(name) => update({ name })}
+          />
+        </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primary} onPress={addHere}>
-            <Text style={styles.primaryText}>+ Add at my location</Text>
-          </TouchableOpacity>
+          <Pressable
+            onPress={addHere}
+            style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+          >
+            <Text style={styles.primaryText}>
+              {locating ? "Locating…" : "+ Add at my location"}
+            </Text>
+          </Pressable>
           <Text style={styles.hint}>or tap the map</Text>
         </View>
 
-        <ScrollView style={styles.list}>
+        <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
           {journey.checkpoints.length === 0 ? (
-            <Text style={styles.empty}>
-              No checkpoints yet. Tap the map to place one.
-            </Text>
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>No checkpoints yet</Text>
+              <Text style={styles.emptyBody}>
+                Tap the map to place one, then attach a sound to it.
+              </Text>
+            </View>
           ) : (
             journey.checkpoints.map((cp, i) => (
               <View key={cp.id} style={styles.row}>
@@ -141,16 +160,23 @@ export default function BuildScreen({ journey, setJourney, region, setRegion }) 
                   <TextInput
                     style={styles.cpName}
                     value={cp.name}
+                    placeholder="Name this place"
+                    placeholderTextColor={colors.textFaint}
                     onChangeText={(name) => editCheckpoint(cp.id, { name })}
                   />
-                  <TouchableOpacity onPress={() => removeCheckpoint(cp.id)}>
+                  <Pressable
+                    onPress={() => removeCheckpoint(cp.id)}
+                    hitSlop={10}
+                    style={({ pressed }) => pressed && styles.pressed}
+                  >
                     <Text style={styles.delete}>×</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
+
                 <View style={styles.rowMeta}>
                   <Text style={styles.metaLabel}>Radius</Text>
                   <TextInput
-                    style={styles.radius}
+                    style={styles.radiusInput}
                     keyboardType="number-pad"
                     value={String(cp.radius)}
                     onChangeText={(v) =>
@@ -160,11 +186,24 @@ export default function BuildScreen({ journey, setJourney, region, setRegion }) 
                     }
                   />
                   <Text style={styles.metaLabel}>m</Text>
-                  <TouchableOpacity onPress={() => pickAudio(cp.id)}>
-                    <Text style={styles.audio} numberOfLines={1}>
+                  <Pressable
+                    onPress={() => pickAudio(cp.id)}
+                    style={({ pressed }) => [
+                      styles.audioChip,
+                      cp.audioName && styles.audioChipSet,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.audioText,
+                        cp.audioName && styles.audioTextSet,
+                      ]}
+                      numberOfLines={1}
+                    >
                       {cp.audioName ? `♪ ${cp.audioName}` : "Choose audio…"}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             ))
@@ -176,71 +215,115 @@ export default function BuildScreen({ journey, setJourney, region, setRegion }) 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.bg },
   map: { flex: 1 },
+
   panel: {
-    backgroundColor: "#1c1c1c",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    maxHeight: "50%",
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    maxHeight: "56%",
+    ...shadow.panel,
   },
+  grabber: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.lineStrong,
+    alignSelf: "center",
+    marginTop: 9,
+  },
+  panelHead: { paddingHorizontal: space.lg, paddingTop: space.md },
   journeyName: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 8,
-    color: "#fff",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 15,
-  },
-  actions: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10 },
-  primary: {
-    backgroundColor: "#ff8c00",
-    borderRadius: 999,
-    paddingHorizontal: 18,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    color: colors.text,
+    paddingHorizontal: 13,
     paddingVertical: 10,
+    ...type.body,
   },
-  primaryText: { color: "#141414", fontWeight: "600", fontSize: 14 },
-  hint: { color: "#888", fontSize: 13 },
-  list: { marginBottom: 12 },
-  empty: { color: "#777", textAlign: "center", paddingVertical: 20, fontSize: 14 },
-  row: { borderTopWidth: 1, borderTopColor: "#2e2e2e", paddingVertical: 10 },
-  rowTop: { flexDirection: "row", alignItems: "center", gap: 10 },
+
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    flexWrap: "wrap",
+  },
+  primary: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    ...shadow.accent,
+  },
+  primaryText: { fontSize: 14, fontWeight: "700", color: colors.accentInk },
+  pressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
+  hint: { ...type.caption, fontSize: 13, color: colors.textFaint },
+
+  list: { paddingHorizontal: space.lg },
+  empty: { paddingVertical: 30, alignItems: "center", gap: 6 },
+  emptyTitle: { ...type.body, color: colors.textDim },
+  emptyBody: {
+    ...type.caption,
+    fontSize: 13,
+    color: colors.textFaint,
+    textAlign: "center",
+    lineHeight: 19,
+  },
+
+  row: { borderTopWidth: 1, borderTopColor: colors.line, paddingVertical: 13 },
+  rowTop: { flexDirection: "row", alignItems: "center", gap: 11 },
   num: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#3388ff",
+    width: 23,
+    height: 23,
+    borderRadius: 12,
+    backgroundColor: colors.zone,
     alignItems: "center",
     justifyContent: "center",
   },
   numText: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  cpName: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#3a3a3a",
-    paddingVertical: 4,
-  },
-  delete: { color: "#ff5c5c", fontSize: 24, paddingHorizontal: 6 },
+  cpName: { flex: 1, color: colors.text, ...type.body, paddingVertical: 3 },
+  delete: { color: colors.textFaint, fontSize: 24, paddingHorizontal: 4 },
+
   rowMeta: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingLeft: 32,
-    paddingTop: 8,
+    gap: space.sm,
+    paddingLeft: 34,
+    paddingTop: 9,
   },
-  metaLabel: { color: "#aaa", fontSize: 13 },
-  radius: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 6,
-    color: "#fff",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+  metaLabel: { ...type.caption, fontSize: 13, color: colors.textDim },
+  radiusInput: {
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.sm,
+    color: colors.text,
     fontSize: 13,
-    minWidth: 46,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 52,
+    textAlign: "center",
   },
-  audio: { color: "#ff8c00", fontSize: 13, textDecorationLine: "underline", flexShrink: 1 },
+  audioChip: {
+    flexShrink: 1,
+    marginLeft: space.xs,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  audioChipSet: {
+    borderColor: colors.accentLine,
+    backgroundColor: colors.accentSoft,
+  },
+  audioText: { fontSize: 13, fontWeight: "600", color: colors.textDim },
+  audioTextSet: { color: colors.accent },
 });

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from "react-native";
+import { View, Text, Pressable, StyleSheet, SafeAreaView } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import BuildScreen from "./src/screens/BuildScreen";
 import WalkScreen from "./src/screens/WalkScreen";
 import { loadJourney, saveJourney, emptyJourney } from "./src/storage/journeys";
+import { colors, radius, space, type } from "./src/theme";
 
 // Ādaži, Latvia — where the prototype was walked.
 const INITIAL_REGION = {
@@ -12,6 +13,11 @@ const INITIAL_REGION = {
   latitudeDelta: 0.01,
   longitudeDelta: 0.01,
 };
+
+const MODES = [
+  { key: "build", label: "Build" },
+  { key: "walk", label: "Walk" },
+];
 
 export default function App() {
   const [journey, setJourney] = useState(emptyJourney());
@@ -30,23 +36,40 @@ export default function App() {
     if (loaded) saveJourney(journey);
   }, [journey, loaded]);
 
+  const count = journey.checkpoints.length;
+
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar style="light" />
 
       <View style={styles.header}>
-        <Text style={styles.title}>MMRY</Text>
+        <View style={styles.brand}>
+          <View style={styles.mark}>
+            <View style={styles.markDot} />
+          </View>
+          <View>
+            <Text style={styles.title}>MMRY</Text>
+            <Text style={styles.subtitle}>
+              {count === 0
+                ? "No checkpoints"
+                : `${count} checkpoint${count === 1 ? "" : "s"}`}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.toggle}>
-          {["build", "walk"].map((m) => (
-            <TouchableOpacity
-              key={m}
-              style={[styles.tab, mode === m && styles.tabActive]}
-              onPress={() => setMode(m)}
+          {MODES.map((m) => (
+            <Pressable
+              key={m.key}
+              onPress={() => setMode(m.key)}
+              style={[styles.tab, mode === m.key && styles.tabActive]}
             >
-              <Text style={[styles.tabText, mode === m && styles.tabTextActive]}>
-                {m === "build" ? "Build" : "Walk"}
+              <Text
+                style={[styles.tabText, mode === m.key && styles.tabTextActive]}
+              >
+                {m.label}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
       </View>
@@ -66,23 +89,45 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#141414" },
+  root: { flex: 1, backgroundColor: colors.bg },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
   },
-  title: { color: "#fff", fontSize: 18, fontWeight: "700", letterSpacing: 1 },
+  brand: { flexDirection: "row", alignItems: "center", gap: 11 },
+  mark: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.zone,
+    backgroundColor: colors.zoneFill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+  },
+  title: { ...type.title, color: colors.text },
+  subtitle: { ...type.caption, color: colors.textFaint, marginTop: 1 },
+
   toggle: {
     flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderRadius: 999,
-    padding: 2,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.pill,
+    padding: 3,
   },
-  tab: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 999 },
-  tabActive: { backgroundColor: "#ff8c00" },
-  tabText: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "600" },
-  tabTextActive: { color: "#141414" },
+  tab: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: radius.pill },
+  tabActive: { backgroundColor: colors.accent },
+  tabText: { ...type.label, color: colors.textDim },
+  tabTextActive: { color: colors.accentInk },
 });

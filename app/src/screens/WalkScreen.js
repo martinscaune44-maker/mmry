@@ -1,17 +1,22 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Animated, Easing } from "react-native";
 import MapView, { Marker, Circle } from "react-native-maps";
 import { startTracking } from "../location";
 import { configureAudioSession, loadClips, unloadAll } from "../engine/audio";
 import { primeJourney } from "../engine/session";
+import { distance } from "../engine/geo";
+import { colors, radius, space, type, shadow, darkMapStyle } from "../theme";
 
 export default function WalkScreen({ journey, region, setRegion }) {
   const [walking, setWalking] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [mode, setMode] = useState(null);
+  const [nearest, setNearest] = useState(null);
   const [error, setError] = useState(null);
+
   const trackerRef = useRef(null);
   const journeyRef = useRef(journey);
+  const pulse = useRef(new Animated.Value(0)).current;
 
   journeyRef.current = journey;
 
@@ -22,6 +27,33 @@ export default function WalkScreen({ journey, region, setRegion }) {
     };
   }, []);
 
+  // Slow breathing ring while inside a zone — legible at a glance, and it
+  // reads clearly on a screen recording.
+  useEffect(() => {
+    if (!activeId) {
+      pulse.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1100,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [activeId, pulse]);
+
   const findCheckpoint = (id) =>
     journeyRef.current.checkpoints.find((cp) => cp.id === id);
 
@@ -30,22 +62,25 @@ export default function WalkScreen({ journey, region, setRegion }) {
 
     const withAudio = journey.checkpoints.filter((cp) => cp.audioUri);
     if (withAudio.length === 0) {
-      setError("No audio attached to any checkpoint yet.");
+      setError("No audio attached yet");
       return;
     }
 
     try {
       await configureAudioSession();
       loadClips(withAudio.map((cp) => ({ id: cp.id, uri: cp.audioUri })));
-
-      // Hand the journey to the session layer so background events can resolve
-      // checkpoints without a storage read.
       primeJourney(journey);
 
-      // Playback is driven by the location layer now — these only move the UI.
       const tracker = await startTracking(journey.checkpoints, {
         onActiveChange: setActiveId,
-        onPosition: () => {},
+        onPosition: ({ latitude, longitude }) => {
+          let best = null;
+          journeyRef.current.checkpoints.forEach((cp) => {
+            const d = distance(latitude, longitude, cp.lat, cp.lng);
+            if (!best || d < best.distance) best = { cp, distance: d };
+          });
+          setNearest(best);
+        },
       });
 
       trackerRef.current = tracker;
@@ -62,9 +97,27 @@ export default function WalkScreen({ journey, region, setRegion }) {
     unloadAll();
     setWalking(false);
     setActiveId(null);
+    setNearest(null);
+    setMode(null);
   };
 
   const activeName = activeId ? findCheckpoint(activeId)?.name : null;
+  const hasCheckpoints = journey.checkpoints.length > 0;
+
+  const statusLabel = error
+    ? error
+    : activeName
+    ? activeName
+    : walking
+    ? "Walking"
+    : hasCheckpoints
+    ? "Ready"
+    : "No checkpoints yet";
+
+  const showDistance = walking && !activeName && nearest;
+  const metres = nearest ? Math.round(nearest.distance) : 0;
+  const distanceText =
+    metres > 999 ? `${(metres / 1000).toFixed(1)} km` : `${metres} m`;
 
   return (
     <View style={styles.container}>
@@ -73,100 +126,202 @@ export default function WalkScreen({ journey, region, setRegion }) {
         region={region}
         onRegionChangeComplete={setRegion}
         showsUserLocation
+        showsMyLocationButton={false}
         followsUserLocation={walking}
+        customMapStyle={darkMapStyle}
+        userInterfaceStyle="dark"
       >
         {journey.checkpoints.map((cp) => (
           <React.Fragment key={cp.id}>
             <Circle
               center={{ latitude: cp.lat, longitude: cp.lng }}
               radius={cp.radius}
-              strokeColor={cp.id === activeId ? "#ff8c00" : "#3388ff"}
+              strokeWidth={cp.id === activeId ? 3 : 2}
+              strokeColor={cp.id === activeId ? colors.accent : colors.zone}
               fillColor={
-                cp.id === activeId
-                  ? "rgba(255,140,0,0.35)"
-                  : "rgba(51,136,255,0.15)"
+                cp.id === activeId ? colors.zoneFillActive : colors.zoneFill
               }
             />
             <Marker
               coordinate={{ latitude: cp.lat, longitude: cp.lng }}
               title={cp.name}
+              pinColor={cp.id === activeId ? "orange" : undefined}
             />
           </React.Fragment>
         ))}
       </MapView>
 
-      <View style={styles.indicator}>
-        <View style={[styles.dot, activeName && styles.dotActive]} />
-        <Text style={styles.indicatorText} numberOfLines={1}>
-          {error
-            ? error
-            : activeName
-            ? activeName
-            : walking
-            ? "No active checkpoint"
-            : "Not walking"}
-        </Text>
+      <View style={styles.statusStack} pointerEvents="none">
+        <View style={[styles.pill, activeName && styles.pillActive]}>
+          <View style={styles.dotWrap}>
+            {activeName && (
+              <Animated.View
+                style={[
+                  styles.ring,
+                  {
+                    opacity: pulse.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.7, 0],
+                    }),
+                    transform: [
+                      {
+                        scale: pulse.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 2.8],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+            )}
+            <View style={[styles.dot, activeName && styles.dotActive]} />
+          </View>
+          <Text style={styles.pillText} numberOfLines={1}>
+            {statusLabel}
+          </Text>
+        </View>
+
+        {showDistance && (
+          <View style={styles.distancePill}>
+            <Text style={styles.distanceText}>
+              {nearest.cp.name} · <Text style={styles.distanceValue}>{distanceText}</Text> away
+            </Text>
+          </View>
+        )}
+
+        {walking && mode && (
+          <View style={styles.modePill}>
+            <Text style={styles.modeText}>
+              {mode === "geofence"
+                ? "Background · pocket the phone"
+                : "Foreground · keep the screen on"}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {walking && mode && (
-        <Text style={styles.mode}>
-          {mode === "geofence"
-            ? "Background geofencing — pocket the phone"
-            : "Foreground only — keep the screen on"}
-        </Text>
-      )}
-
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.button, walking && styles.buttonStop]}
+        <Pressable
           onPress={walking ? end : begin}
+          disabled={!hasCheckpoints}
+          style={({ pressed }) => [
+            styles.button,
+            walking && styles.buttonStop,
+            !hasCheckpoints && styles.buttonDisabled,
+            pressed && styles.buttonPressed,
+          ]}
         >
-          <Text style={styles.buttonText}>
+          <Text
+            style={[
+              styles.buttonText,
+              walking && styles.buttonTextStop,
+              !hasCheckpoints && styles.buttonTextDisabled,
+            ]}
+          >
             {walking ? "Stop walking" : "Start walking"}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.bg },
   map: { flex: 1 },
-  indicator: {
+
+  statusStack: {
     position: "absolute",
-    top: 60,
-    alignSelf: "center",
+    top: space.lg,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    gap: space.sm,
+  },
+  pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(20,20,20,0.85)",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    maxWidth: "90%",
+    gap: 10,
+    backgroundColor: "rgba(23,24,26,0.94)",
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: radius.pill,
+    maxWidth: "92%",
+    ...shadow.pill,
   },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#888" },
-  dotActive: { backgroundColor: "#ff8c00" },
-  indicatorText: { color: "#fff", fontSize: 14, fontWeight: "500", flexShrink: 1 },
-  mode: {
+  pillActive: {
+    borderColor: colors.accentLine,
+    backgroundColor: "rgba(38,26,10,0.94)",
+  },
+  pillText: { ...type.heading, color: colors.text, flexShrink: 1 },
+
+  dotWrap: { width: 9, height: 9, alignItems: "center", justifyContent: "center" },
+  ring: {
     position: "absolute",
-    top: 100,
-    alignSelf: "center",
-    color: "#bbb",
-    fontSize: 12,
-    backgroundColor: "rgba(20,20,20,0.7)",
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: colors.accent,
+  },
+  dot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: colors.textFaint,
+  },
+  dotActive: { backgroundColor: colors.accent },
+
+  distancePill: {
+    backgroundColor: "rgba(23,24,26,0.88)",
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+  },
+  distanceText: { ...type.caption, fontSize: 13, color: colors.textDim },
+  distanceValue: { color: colors.text, fontWeight: "700" },
+
+  modePill: {
+    backgroundColor: "rgba(23,24,26,0.7)",
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: radius.pill,
   },
-  footer: { backgroundColor: "#1c1c1c", padding: 16 },
+  modeText: { ...type.caption, color: colors.textFaint },
+
+  footer: {
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.lg,
+  },
   button: {
-    backgroundColor: "#ff8c00",
-    borderRadius: 999,
-    paddingVertical: 14,
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+    paddingVertical: 15,
     alignItems: "center",
+    ...shadow.accent,
   },
-  buttonStop: { backgroundColor: "#444" },
-  buttonText: { color: "#141414", fontWeight: "700", fontSize: 16 },
+  buttonStop: {
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  buttonDisabled: {
+    backgroundColor: colors.surfaceHigh,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  buttonPressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
+  buttonText: { fontSize: 16, fontWeight: "700", color: colors.accentInk },
+  buttonTextStop: { color: colors.text },
+  buttonTextDisabled: { color: colors.textFaint },
 });

@@ -12,8 +12,9 @@
 
 <div id="start-overlay">
   <div id="start-panel">
-    <h1>MMRY Soundwalk</h1>
-    <p>Put on headphones, then tap below and allow location access.</p>
+    <div class="mark" aria-hidden="true"></div>
+    <h1>MMRY</h1>
+    <p>Music tied to places. Put on headphones, then walk — the sound starts when you arrive.</p>
     <button id="start-button" type="button">Start soundwalk</button>
     <a id="builder-link" href="builder.html">Build your own journey →</a>
   </div>
@@ -26,6 +27,7 @@
     <span id="zone-dot"></span>
     <span id="zone-text">Waiting for location…</span>
   </div>
+  <div id="distance-readout"></div>
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>

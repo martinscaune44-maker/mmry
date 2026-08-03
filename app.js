@@ -5,6 +5,7 @@
 
 const zoneIndicator = document.getElementById("zone-indicator");
 const zoneText = document.getElementById("zone-text");
+const distanceReadout = document.getElementById("distance-readout");
 
 // ---- Map setup -------------------------------------------------------------
 
@@ -53,8 +54,23 @@ function updateIndicator(activeZoneName) {
   } else {
     zoneIndicator.classList.remove("active-zone");
     zoneIndicator.classList.add("no-zone");
-    zoneText.textContent = "No active zone";
+    zoneText.textContent = "Walking";
   }
+}
+
+// Shows how far the nearest zone is while outside one. On a filmed walk this
+// is what lets a viewer see the mechanic working — the number falls, then the
+// sound starts.
+function updateDistance(nearest) {
+  if (!nearest) {
+    distanceReadout.classList.remove("visible");
+    return;
+  }
+
+  const metres = Math.round(nearest.distance);
+  const shown = metres > 999 ? `${(metres / 1000).toFixed(1)} km` : `${metres} m`;
+  distanceReadout.innerHTML = `${nearest.zone.name} · <strong>${shown}</strong> away`;
+  distanceReadout.classList.add("visible");
 }
 
 // ---- Geolocation tracking ----------------------------------------------------
@@ -84,6 +100,7 @@ function onPosition(position) {
   }
 
   let activeZoneName = null;
+  let nearest = null;
 
   Object.values(zoneState).forEach((state) => {
     const { zone } = state;
@@ -101,15 +118,18 @@ function onPosition(position) {
     }
 
     if (isInside) activeZoneName = zone.name;
+    if (!nearest || dist < nearest.distance) nearest = { zone, distance: dist };
   });
 
   updateIndicator(activeZoneName);
+  updateDistance(activeZoneName ? null : nearest);
 }
 
 function onPositionError(err) {
   console.warn("Geolocation error:", err);
   zoneIndicator.classList.remove("active-zone");
   zoneIndicator.classList.add("no-zone");
+  distanceReadout.classList.remove("visible");
   zoneText.textContent =
     err.code === err.PERMISSION_DENIED
       ? "Location permission denied"
