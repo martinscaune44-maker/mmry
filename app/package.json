@@ -1,0 +1,27 @@
+{
+  "name": "mmry-app",
+  "version": "0.1.0",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "fix": "expo install --fix"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "3.1.1",
+    "expo": "~57.0.9",
+    "expo-audio": "~57.0.3",
+    "expo-document-picker": "~57.0.1",
+    "expo-location": "~57.0.7",
+    "expo-status-bar": "~57.0.0",
+    "expo-task-manager": "~57.0.7",
+    "react": "19.1.0",
+    "react-native": "0.82.0",
+    "react-native-maps": "1.29.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0"
+  }
+}

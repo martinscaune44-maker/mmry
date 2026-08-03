@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "MMRY",
+    "slug": "mmry",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#141414"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mmry.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "MMRY plays audio when you reach a place on your journey.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "MMRY needs background location so audio can start when you arrive at a place, even with your phone in your pocket and the screen off.",
+        "UIBackgroundModes": ["location", "audio"]
+      }
+    },
+    "android": {
+      "package": "com.mmry.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "MMRY needs background location so audio can start when you arrive at a place, even with your phone in your pocket.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ]
+    ]
+  }
+}
