@@ -128,7 +128,7 @@ the two current tracks are 8MB and 6.5MB.
 track at 256kbps is ~8MB; at 128kbps it is half that, with little audible
 difference outdoors.
 
-### Phase 3 — Native app 🚧 runs on device, walk not yet verified
+### Phase 3 — Native app ✅ Stage A working, walked and verified
 
 Expo app lives in [`app/`](app/). Map, journey builder, zone-triggered audio
 with fades — the web prototype's behaviour, natively.
@@ -145,10 +145,15 @@ It tries geofencing and falls back to foreground polling, so **Stage B is a
 build command, not a rewrite**. The background config in `app.json` is already
 written and simply inert until then.
 
-**Status:** launches in Expo Go on an iPhone 12 mini (iOS 26.5). Crashed on
-first load, worked on retry — unexplained, probably the initial bundle compile
-timing out, but capture the error if it recurs. Whether a walk actually
-triggers audio is still unverified.
+**Status:** Stage A works end to end on an iPhone 12 mini (iOS 26.5) — building
+a journey, attaching audio, walking it, audio fading in and out. Crashed on
+first load and worked on retry; unexplained, probably the initial bundle
+compile timing out, but capture the error if it recurs.
+
+**Not usable for pitching yet.** Expo Go loads the app from a laptop running
+`npx expo start` on the same WiFi. In a pitch room that means carrying a laptop
+and hoping for a network — the web demo, which is just a link, is strictly
+better until a standalone build exists (Stage B, or TestFlight).
 
 **The SDK number is the thing that matters.** Expo Go only runs projects built
 for the exact SDK it supports, and that number is printed in the app itself
