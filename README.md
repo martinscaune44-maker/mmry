@@ -52,9 +52,11 @@ same way — just drag-and-drop or connect the repo.
 ## Notes / current limitations (prototype scope)
 
 - Zones are hardcoded in `zones.js` — no UI for adding/editing them.
-- Audio autoplay requires a user gesture on some browsers/OSes; if a clip
-  doesn't start on first zone entry, a tap anywhere on the page before
-  walking in usually unlocks audio playback for the session.
+- Each clip plays **once** per zone entry, then stops. Leaving and re-entering
+  a zone restarts that clip from the beginning.
+- Mobile browsers block audio that wasn't triggered by a tap, so the app opens
+  on a "Start soundwalk" screen. Tapping it unlocks audio playback and begins
+  location tracking — you must tap it before walking.
 - Zone circles on the map turn orange while you're inside them; the pill at
   the top shows the currently active zone (or "No active zone").
 - If multiple zones overlap, the indicator shows whichever was matched last

@@ -30,8 +30,14 @@ ZONES.forEach((zone) => {
   const marker = L.marker([zone.lat, zone.lng]).addTo(map).bindPopup(zone.name);
 
   const audio = new Audio(zone.audio);
-  audio.loop = true;
+  audio.loop = false;
   audio.preload = "none";
+
+  // Tracks play once and stop. Rewind when finished so that leaving and
+  // re-entering the zone starts the clip from the beginning again.
+  audio.addEventListener("ended", () => {
+    audio.currentTime = 0;
+  });
 
   zoneState[zone.id] = { zone, circle, marker, audio, inside: false, volume: 0 };
 });
@@ -171,12 +177,43 @@ function onPositionError(err) {
   }
 }
 
-if ("geolocation" in navigator) {
+// ---- Start gate --------------------------------------------------------------
+// Mobile browsers refuse to play audio that wasn't initiated by a user gesture.
+// Briefly starting and pausing every clip inside the tap handler "unlocks" them
+// so they can be played later by the geolocation logic.
+
+function primeAudio() {
+  Object.values(zoneState).forEach((state) => {
+    const audio = state.audio;
+    audio.volume = 0;
+    audio
+      .play()
+      .then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      })
+      .catch(() => {
+        /* Clip missing or not yet loadable — it will retry on zone entry. */
+      });
+  });
+}
+
+function startTracking() {
+  if (!("geolocation" in navigator)) {
+    zoneText.textContent = "Geolocation not supported";
+    return;
+  }
+
   navigator.geolocation.watchPosition(onPosition, onPositionError, {
     enableHighAccuracy: true,
     maximumAge: 2000,
     timeout: 15000,
   });
-} else {
-  zoneText.textContent = "Geolocation not supported";
 }
+
+document.getElementById("start-button").addEventListener("click", () => {
+  document.getElementById("start-overlay").classList.add("hidden");
+  primeAudio();
+  startTracking();
+  map.invalidateSize();
+});

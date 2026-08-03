@@ -68,3 +68,53 @@ html, body {
 #zone-indicator.no-zone #zone-dot {
   background: #888;
 }
+
+/* Tap-to-start gate: mobile browsers block audio playback until the user
+   has interacted with the page, so audio is primed on this tap. */
+#start-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #141414;
+  padding: 24px;
+  text-align: center;
+}
+
+#start-overlay.hidden {
+  display: none;
+}
+
+#start-panel h1 {
+  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  letter-spacing: 0.02em;
+}
+
+#start-panel p {
+  color: #bbb;
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 28px 0;
+  max-width: 300px;
+}
+
+#start-button {
+  background: #ff8c00;
+  color: #141414;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+#start-button:active {
+  opacity: 0.8;
+}
