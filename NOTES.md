@@ -128,7 +128,28 @@ the two current tracks are 8MB and 6.5MB.
 track at 256kbps is ~8MB; at 128kbps it is half that, with little audible
 difference outdoors.
 
-### Phase 3 — Native app
+### Phase 3 — Native app 🚧 scaffolded, never run
+
+Expo app lives in [`app/`](app/). Map, journey builder, zone-triggered audio
+with fades — the web prototype's behaviour, natively.
+
+**Split into two stages so the money comes late:**
+
+- **Stage A, free:** runs in Expo Go today. Everything works except background
+  triggering. Needs Node and a free Expo account, nothing more.
+- **Stage B, $99/year:** a development build unlocks OS geofencing — triggering
+  with the phone pocketed and the screen off, plus far better battery.
+
+`src/location/index.js` is the only file that knows which strategy is active.
+It tries geofencing and falls back to foreground polling, so **Stage B is a
+build command, not a rewrite**. The background config in `app.json` is already
+written and simply inert until then.
+
+**Caveat: none of it has run on a phone.** It is written against documented
+SDK 57 APIs and parses, but nothing more. Expect version friction on first
+install — `npx expo install --fix` is step one. Known gaps are listed in
+`app/README.md`; the significant one is that audio after a cold background
+launch is unfinished.
 
 Triggered by the platform limits in section 1, not by ambition. Needed for:
 
