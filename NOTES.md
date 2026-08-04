@@ -13,7 +13,9 @@ Two pages are deployed from this repo:
 
 - **Fixed demo** — `/` — two real zones with real tracks. The pitch demo.
 - **Journey builder** — `/builder.html` — place your own checkpoints, attach
-  your own audio, walk it. Stored on the device only.
+  your own audio, walk it, then publish it to a link.
+- **Shared walk** — `/walk.html?j=<id>` — what a recipient opens. Walking only,
+  no builder.
 
 Both the web pages and the native app share one visual language (tokens in
 `style.css` and `app/src/theme.js`). A **distance readout** shows how far the
@@ -29,13 +31,16 @@ What is proven **on real hardware, walked in the field**:
 - Handoff from one zone to the next works
 - Runs on iPhone
 
-What is only proven **in a headless browser with mocked GPS** — works, but no
-human has walked it yet:
+What is only proven **in a headless browser** — works, but no human has walked
+it yet:
 
 - The journey builder: placing checkpoints, attaching audio, walking your own
+- Publishing and opening a shared link. The Supabase endpoints were exercised
+  directly and the browser flow against a mocked backend; the two halves have
+  not yet met on a real phone.
 
-Cost so far: nothing but time. No backend, no database, no accounts, no
-hosting bill.
+Cost so far: nothing but time. Supabase's free tier carries the sharing
+backend; there are still no accounts and no hosting bill.
 
 **What this prototype cannot do** — and these shape everything below:
 
@@ -148,13 +153,6 @@ query over the same rows, not a different product.
 which the current 8 MB track only just clears. Transcoding uploads to ~128kbps
 would roughly halve that with no audible difference outdoors — worth doing
 before real users arrive.
-
-**New costs:** storage and bandwidth, growing with users. Audio is heavy —
-the two current tracks are 8MB and 6.5MB.
-
-**Decision needed:** cap file sizes, or transcode uploads down. A 4-minute
-track at 256kbps is ~8MB; at 128kbps it is half that, with little audible
-difference outdoors.
 
 ### Phase 3 — Native app ✅ Stage A working, walked and verified
 
