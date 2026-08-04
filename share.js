@@ -73,13 +73,28 @@ const MmryShare = {
       );
 
       if (!response.ok) {
-        const detail = await response.text();
+        // Supabase returns JSON errors; a raw dump of one is no use to anyone.
+        let detail = await response.text();
+        try {
+          detail = JSON.parse(detail).message || detail;
+        } catch (_) {
+          /* not JSON — show it as-is */
+        }
+
         if (response.status === 413) {
+          const mb = (cp.audioBlob.size / 1024 / 1024).toFixed(1);
           throw new Error(
-            `"${cp.audioName}" is too large — the limit is 10 MB. Export it at a lower bitrate.`
+            `"${cp.audioName}" is ${mb} MB — the limit is 10 MB. Export it at a lower bitrate and try again.`
           );
         }
-        throw new Error(`Upload failed for "${cp.name}": ${detail}`);
+        if (response.status === 415) {
+          throw new Error(
+            `"${cp.audioName}" is a file type the server won't accept (${
+              cp.audioBlob.type || "unknown"
+            }). Try an mp3 or m4a.`
+          );
+        }
+        throw new Error(`Couldn't upload "${cp.name}": ${detail}`);
       }
 
       checkpoints.push({

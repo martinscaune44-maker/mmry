@@ -36,6 +36,11 @@ create policy "Anyone can publish a journey"
 
 -- Audio lives in storage rather than the database. 10 MB per file is generous
 -- for a soundwalk clip and keeps the free tier from evaporating.
+--
+-- The type list has to be forgiving. An .m4a voice memo is an MPEG-4 container,
+-- so iOS frequently reports audio files as video/mp4 or video/quicktime; a
+-- strict audio/* list rejects perfectly good recordings. Size is the limit that
+-- actually protects the free tier, so it does the real work here.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'audio',
@@ -43,8 +48,14 @@ values (
   true,
   10485760,
   array[
-    'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a', 'audio/aac',
-    'audio/ogg', 'audio/wav', 'audio/x-wav', 'audio/webm'
+    'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a',
+    'audio/aac', 'audio/ogg', 'audio/opus', 'audio/wav', 'audio/x-wav',
+    'audio/wave', 'audio/vnd.wave', 'audio/webm', 'audio/flac', 'audio/x-flac',
+    'audio/3gpp', 'audio/amr', 'audio/basic', 'audio/x-caf',
+    -- Containers iOS reports for what are really audio recordings.
+    'video/mp4', 'video/quicktime', 'video/3gpp', 'video/webm',
+    -- Some browsers send no useful type at all.
+    'application/octet-stream'
   ]
 )
 on conflict (id) do update set
