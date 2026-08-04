@@ -135,6 +135,14 @@ buys link sharing without an auth system; it costs orphaned rows and means a
 walk cannot be corrected after sending. Accounts earn their place when editing
 matters, or when someone wants to see everything they have made.
 
+**Recording happens in the app.** Tap *Record here* at a checkpoint and capture
+sound on the spot — no Files app, no picking a track made elsewhere. This came
+from watching the alternative fail: with only a file picker, iOS offers the
+camera, and filming a video for its audio track is an easy mistake to make.
+Worth remembering as a product point rather than a feature: *stand where it
+happened and record it* is the actual creative loop, and it is what the
+time-capsule and friend's-walk framings both depend on.
+
 Still open:
 
 1. User accounts and editing published journeys
