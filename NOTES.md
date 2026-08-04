@@ -46,8 +46,9 @@ hosting bill.
   map tiles, so a walk survives losing signal. The site is also installable to a
   home screen and opens fullscreen without browser chrome.
 - **Battery drain.** Continuous high-accuracy GPS is expensive.
-- **No sharing or sync.** Built journeys live in one browser on one device.
-  Export/import files are the only way to move them.
+- ~~No sharing or sync.~~ **Solved on the web.** Journeys publish to a link
+  anyone can walk. Journeys still being built remain device-local until
+  published, and the native app has no sharing yet.
 - **Browser storage is not durable.** iOS can evict a site's stored data after
   a period without visits. Fine for demos; fatal for anything promising to
   keep a memory safe. This is why the time capsule cannot be device-local.
@@ -114,19 +115,39 @@ is the next thing to do and it costs nothing.
 Leaflet is vendored into `vendor/` rather than loaded from a CDN — a map
 library failing to load mid-pitch would take the whole demo down.
 
-### Phase 2 — Accounts, storage, real sharing
+### Phase 2 — Sharing ✅ links working; accounts and discovery still open
 
-This is where it stops being free, and where the engineering gets real.
+**Backend: Supabase** (free tier, EU/Ireland). Schema in `supabase/schema.sql`.
 
-1. **Decision needed:** backend platform. Supabase or Firebase are the
-   sensible defaults — both give database, file storage and auth without
-   running servers.
-2. User accounts
-3. Upload audio and photos to cloud storage
-4. Share a journey by link
-5. Browse and walk journeys made by others
-6. Basic moderation — user-uploaded audio at public coordinates will
-   eventually need it
+Done: audio uploads to storage, journeys publish to an unguessable id, the
+builder hands back a link, and recipients land on `walk.html?j=<id>` — a walk
+page with no builder UI. Published audio is cached by the service worker, so a
+shared walk survives losing signal too.
+
+**No accounts yet, deliberately.** The link is the credential. Nothing can edit
+or delete a published journey, so republishing mints a new link. That trade
+buys link sharing without an auth system; it costs orphaned rows and means a
+walk cannot be corrected after sending. Accounts earn their place when editing
+matters, or when someone wants to see everything they have made.
+
+Still open:
+
+1. User accounts and editing published journeys
+2. Photos as well as audio
+3. **Discovery — browse walks by area.** Deliberately last, see below.
+4. Moderation — user-uploaded audio at public coordinates will eventually
+   need it
+
+**On discovery.** A browsable catalogue of walks is exactly what Detour was,
+and exactly what sank it (section 7). It is also a bad demo before there is
+supply: an empty discovery map reads as a ghost town, whereas a single link
+from a friend reads as alive. Links create the supply; discovery is then a
+query over the same rows, not a different product.
+
+**Costs:** storage and bandwidth grow with users. Files are capped at 10 MB,
+which the current 8 MB track only just clears. Transcoding uploads to ~128kbps
+would roughly halve that with no audible difference outdoors — worth doing
+before real users arrive.
 
 **New costs:** storage and bandwidth, growing with users. Audio is heavy —
 the two current tracks are 8MB and 6.5MB.
