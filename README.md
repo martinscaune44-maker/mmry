@@ -1,23 +1,26 @@
 # MMRY Soundwalk Demo
 
-A minimal, mobile-friendly prototype: a map centered on Ādaži, Latvia with a
-few fixed "zones." Walk into a zone with your phone and an audio clip fades
-in; walk out and it fades out. No backend, no database, no build step —
-just static HTML/CSS/JS and Leaflet (loaded from a CDN).
+Music tied to places. Walk toward a point on the map and its audio fades in;
+walk away and it fades out. Static HTML/CSS/JS with no build step, plus
+Supabase for sharing.
 
-There are two pages:
+Three pages:
 
-- **`index.html`** — the fixed demo. Zones hardcoded in `zones.js`. This is the
-  pitch demo.
-- **`builder.html`** — build your own journey. Drop checkpoints, attach audio
-  from your phone, then walk it. Everything is stored on the device.
+- **`index.html`** — the fixed demo. Zones hardcoded in `zones.js`.
+- **`builder.html`** — build a journey: place checkpoints, record audio on the
+  spot, then publish it to a link.
+- **`walk.html?j=<id>`** — what a recipient opens. Walking only, no builder.
 
 ## Structure
 
 - `index.html` / `app.js` — fixed demo
 - `builder.html` / `builder.js` — journey builder
 - `engine.js` — shared distance maths and audio playback
-- `storage.js` — on-device journey storage (IndexedDB) plus export/import
+- `storage.js` — on-device journey storage (IndexedDB)
+- `recorder.js` — recording audio in place
+- `share.js` / `supabase-config.js` — publishing and loading shared journeys
+- `sw.js` / `manifest.json` — offline support and home-screen install
+- `supabase/schema.sql` — database and storage setup, safe to re-run
 - `zones.js` — **edit this** to set the fixed demo's coordinates and audio
 - `style.css` — mobile-first styling for both pages
 - `audio/` — audio files used by the fixed demo
@@ -27,8 +30,8 @@ There are two pages:
 ## Using the journey builder
 
 **Build mode** — tap the map to place a checkpoint, or press *Add at my
-location*. Rename it, set its radius, and attach an audio file from your phone.
-Drag a marker to move it.
+location*. Rename it, set its radius, then tap **Record here** to capture sound
+where you are standing — or pick an existing file. Drag a marker to move it.
 
 **Walk mode** — tap *Walk*, then *Start walking*, and it behaves exactly like
 the fixed demo.
@@ -104,7 +107,9 @@ same way — just drag-and-drop or connect the repo.
 
 ## Notes / current limitations (prototype scope)
 
-- Zones are hardcoded in `zones.js` — no UI for adding/editing them.
+- The fixed demo's zones are hardcoded in `zones.js`; the builder has a UI.
+- A published journey cannot be edited — republishing mints a new link. There
+  are no accounts yet: the unguessable link is the credential.
 - Each clip plays **once** per zone entry, then stops. Leaving and re-entering
   a zone restarts that clip from the beginning.
 - Mobile browsers block audio that wasn't triggered by a tap, so the app opens
