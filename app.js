@@ -14,8 +14,10 @@ const locationHelp = document.getElementById("location-help");
 
 const map = L.map("map").setView([MAP_CENTER.lat, MAP_CENTER.lng], MAP_ZOOM);
 
-// Dark basemap so the map does not glare white against the dark interface.
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+// Light basemap. A dark map under dark chrome reads as one black smear and the
+// checkpoint circles vanish into it; every serious map app — Strava, Komoot,
+// AllTrails — keeps the map light and the furniture dark.
+L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
   maxZoom: 20,
   subdomains: "abcd",
   attribution:

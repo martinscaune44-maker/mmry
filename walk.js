@@ -20,7 +20,10 @@ statusBar.classList.add("pre-walk");
 
 const map = L.map("map").setView([57.081058, 24.319797], 15);
 
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+// Light basemap. A dark map under dark chrome reads as one black smear and the
+// checkpoint circles vanish into it; every serious map app — Strava, Komoot,
+// AllTrails — keeps the map light and the furniture dark.
+L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
   maxZoom: 20,
   subdomains: "abcd",
   attribution:

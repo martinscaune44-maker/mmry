@@ -24,8 +24,10 @@ let insideState = {}; // checkpoint id -> bool
 
 const map = L.map("map").setView([57.0810, 24.3198], 15);
 
-// Dark basemap so the map does not glare white against the dark interface.
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+// Light basemap. A dark map under dark chrome reads as one black smear and the
+// checkpoint circles vanish into it; every serious map app — Strava, Komoot,
+// AllTrails — keeps the map light and the furniture dark.
+L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
   maxZoom: 20,
   subdomains: "abcd",
   attribution:
@@ -107,6 +109,150 @@ function renderMap() {
   });
 }
 
+function renderCheckpoint(cp, index) {
+  const li = document.createElement("li");
+
+  // --- title row
+  const row = document.createElement("div");
+  row.className = "cp-row";
+
+  const num = document.createElement("span");
+  num.className = "cp-num";
+  num.textContent = index + 1;
+
+  const name = document.createElement("input");
+  name.type = "text";
+  name.value = cp.name;
+  name.className = "cp-name";
+  name.addEventListener("change", () => {
+    cp.name = name.value;
+    persist();
+    renderMap();
+  });
+
+  const del = document.createElement("button");
+  del.className = "cp-delete";
+  del.type = "button";
+  del.textContent = "×";
+  del.title = "Delete checkpoint";
+  del.addEventListener("click", () => removeCheckpoint(cp.id));
+
+  row.append(num, name, del);
+
+  // --- controls row
+  const meta = document.createElement("div");
+  meta.className = "cp-meta";
+
+  const radiusLabel = document.createElement("label");
+  radiusLabel.className = "cp-radius-label";
+  radiusLabel.textContent = "Radius ";
+  const radius = document.createElement("input");
+  radius.type = "number";
+  radius.min = "5";
+  radius.max = "500";
+  radius.value = cp.radius;
+  radius.className = "cp-radius";
+  radius.addEventListener("change", () => {
+    cp.radius = Number(radius.value) || DEFAULT_RADIUS;
+    persist();
+    renderMap();
+  });
+  radiusLabel.appendChild(radius);
+  radiusLabel.append(" m");
+
+  // Recording in place is the primary way to add sound — you are standing
+  // where it belongs. Choosing a file is the secondary path.
+  const recordButton = document.createElement("button");
+  recordButton.type = "button";
+  recordButton.className = "cp-record";
+  recordButton.dataset.cp = cp.id;
+  const isThisRecording = recordingCheckpointId === cp.id;
+  recordButton.classList.toggle("recording", isThisRecording);
+  recordButton.textContent = isThisRecording
+    ? `■ Stop ${mmryFormatDuration(MmryRecorder.elapsedMs())}`
+    : cp.audioBlob
+    ? "● Re-record"
+    : "● Record here";
+  recordButton.addEventListener("click", () => toggleRecording(cp.id));
+  if (!MmryRecorder.supported()) recordButton.disabled = true;
+
+  meta.append(radiusLabel, recordButton);
+
+  if (!cp.audioBlob) {
+    const audioLabel = document.createElement("label");
+    audioLabel.className = "cp-audio";
+    audioLabel.textContent = "or choose a file";
+    audioLabel.appendChild(makeFileInput(cp));
+    meta.append(audioLabel);
+  }
+
+  li.append(row, meta);
+
+  // --- playback row, only once there is something to hear
+  if (cp.audioBlob) {
+    li.append(renderPlayer(cp));
+  }
+
+  return li;
+}
+
+function makeFileInput(cp) {
+  const input = document.createElement("input");
+  input.type = "file";
+  // Listing concrete extensions as well as audio/* nudges iOS towards the
+  // Files app rather than the camera.
+  input.accept = "audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus,.caf";
+  input.hidden = true;
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (!file) return;
+    cp.audioBlob = file;
+    cp.audioName = file.name;
+    persist();
+    renderList();
+  });
+  return input;
+}
+
+// Publishing audio nobody has listened to is the easiest mistake to make here,
+// so every clip gets a play button as soon as it exists.
+function renderPlayer(cp) {
+  const wrap = document.createElement("div");
+  wrap.className = "cp-player";
+
+  const play = document.createElement("button");
+  play.type = "button";
+  play.className = "cp-play";
+  play.dataset.cp = cp.id;
+  play.textContent = previewingId === cp.id ? "❚❚" : "▶";
+  play.setAttribute("aria-label", "Play recording");
+  play.addEventListener("click", () => togglePreview(cp.id));
+
+  const label = document.createElement("span");
+  label.className = "cp-filename";
+  label.textContent = cp.audioName || "recording";
+
+  const time = document.createElement("span");
+  time.className = "cp-time";
+  time.dataset.cp = cp.id;
+  time.textContent = "";
+
+  const bar = document.createElement("div");
+  bar.className = "cp-progress";
+  const fill = document.createElement("div");
+  fill.className = "cp-progress-fill";
+  fill.dataset.cp = cp.id;
+  bar.appendChild(fill);
+
+  const replace = document.createElement("label");
+  replace.className = "cp-replace";
+  replace.textContent = "Replace";
+  replace.appendChild(makeFileInput(cp));
+
+  wrap.append(play, label, time, bar, replace);
+  return wrap;
+}
+
 function renderList() {
   const list = el("checkpoint-list");
   list.innerHTML = "";
@@ -116,97 +262,15 @@ function renderList() {
     empty.className = "empty";
     empty.textContent = "No checkpoints yet. Tap the map to place one.";
     list.appendChild(empty);
+    updateShareBar();
     return;
   }
 
   journey.checkpoints.forEach((cp, index) => {
-    const li = document.createElement("li");
-
-    const row = document.createElement("div");
-    row.className = "cp-row";
-
-    const num = document.createElement("span");
-    num.className = "cp-num";
-    num.textContent = index + 1;
-
-    const name = document.createElement("input");
-    name.type = "text";
-    name.value = cp.name;
-    name.className = "cp-name";
-    name.addEventListener("change", () => {
-      cp.name = name.value;
-      persist();
-      renderMap();
-    });
-
-    const del = document.createElement("button");
-    del.className = "cp-delete";
-    del.type = "button";
-    del.textContent = "×";
-    del.title = "Delete checkpoint";
-    del.addEventListener("click", () => removeCheckpoint(cp.id));
-
-    row.append(num, name, del);
-
-    const meta = document.createElement("div");
-    meta.className = "cp-meta";
-
-    const radiusLabel = document.createElement("label");
-    radiusLabel.textContent = "Radius ";
-    const radius = document.createElement("input");
-    radius.type = "number";
-    radius.min = "5";
-    radius.max = "500";
-    radius.value = cp.radius;
-    radius.className = "cp-radius";
-    radius.addEventListener("change", () => {
-      cp.radius = Number(radius.value) || DEFAULT_RADIUS;
-      persist();
-      renderMap();
-    });
-    radiusLabel.appendChild(radius);
-    radiusLabel.append(" m");
-
-    // Recording in place is the primary way to add sound — you are standing
-    // where it belongs. Choosing a file is the secondary path.
-    const recordButton = document.createElement("button");
-    recordButton.type = "button";
-    recordButton.className = "cp-record";
-    recordButton.dataset.cp = cp.id;
-    const isThisRecording = recordingCheckpointId === cp.id;
-    recordButton.classList.toggle("recording", isThisRecording);
-    recordButton.textContent = isThisRecording
-      ? `■ Stop ${mmryFormatDuration(MmryRecorder.elapsedMs())}`
-      : cp.audioBlob
-      ? "● Re-record"
-      : "● Record here";
-    recordButton.addEventListener("click", () => toggleRecording(cp.id));
-    if (!MmryRecorder.supported()) recordButton.disabled = true;
-
-    const audioLabel = document.createElement("label");
-    audioLabel.className = "cp-audio";
-    audioLabel.textContent = cp.audioName ? `♪ ${cp.audioName}` : "or choose a file";
-    const audioInput = document.createElement("input");
-    audioInput.type = "file";
-    // Listing concrete extensions as well as audio/* nudges iOS towards the
-    // Files app rather than the camera.
-    audioInput.accept =
-      "audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus,.caf";
-    audioInput.hidden = true;
-    audioInput.addEventListener("change", () => {
-      const file = audioInput.files[0];
-      if (!file) return;
-      cp.audioBlob = file;
-      cp.audioName = file.name;
-      persist();
-      renderList();
-    });
-    audioLabel.appendChild(audioInput);
-
-    meta.append(radiusLabel, recordButton, audioLabel);
-    li.append(row, meta);
-    list.appendChild(li);
+    list.appendChild(renderCheckpoint(cp, index));
   });
+
+  updateShareBar();
 }
 
 function render() {
@@ -550,3 +614,98 @@ async function toggleRecording(checkpointId) {
 
 // A recording left running when the tab is closed would hold the microphone open.
 window.addEventListener("pagehide", () => MmryRecorder.cancel());
+
+// ---- Clip preview ----------------------------------------------------------------
+// Listening back before publishing. Deliberately separate from MmryAudio, which
+// owns the walk's playback and would be confused by a scrub-through here.
+
+let previewingId = null;
+let previewAudio = null;
+let previewUrl = null;
+
+function stopPreview() {
+  if (previewAudio) {
+    previewAudio.pause();
+    previewAudio = null;
+  }
+  if (previewUrl) {
+    URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
+  }
+  previewingId = null;
+}
+
+function togglePreview(checkpointId) {
+  if (previewingId === checkpointId) {
+    stopPreview();
+    renderList();
+    return;
+  }
+
+  stopPreview();
+
+  const cp = findCheckpoint(checkpointId);
+  if (!cp || !cp.audioBlob) return;
+
+  previewUrl = URL.createObjectURL(cp.audioBlob);
+  previewAudio = new Audio(previewUrl);
+  previewingId = checkpointId;
+
+  previewAudio.addEventListener("timeupdate", () => {
+    const fill = document.querySelector(`.cp-progress-fill[data-cp="${checkpointId}"]`);
+    const time = document.querySelector(`.cp-time[data-cp="${checkpointId}"]`);
+    // Recorded blobs often report an unknown duration until they finish loading.
+    const known = Number.isFinite(previewAudio.duration) && previewAudio.duration > 0;
+    if (fill && known) {
+      fill.style.width = `${(previewAudio.currentTime / previewAudio.duration) * 100}%`;
+    }
+    if (time) {
+      time.textContent = known
+        ? `${mmryFormatDuration(previewAudio.currentTime * 1000)} / ${mmryFormatDuration(previewAudio.duration * 1000)}`
+        : mmryFormatDuration(previewAudio.currentTime * 1000);
+    }
+  });
+
+  previewAudio.addEventListener("ended", () => {
+    stopPreview();
+    renderList();
+  });
+
+  previewAudio.play().catch((err) => {
+    console.warn("Could not play back:", err);
+    stopPreview();
+    renderList();
+  });
+
+  renderList();
+}
+
+// Recording something new should not leave an old preview running underneath.
+const originalToggleRecording = toggleRecording;
+toggleRecording = function (checkpointId) {
+  stopPreview();
+  return originalToggleRecording(checkpointId);
+};
+
+window.addEventListener("pagehide", stopPreview);
+
+// ---- Share bar -------------------------------------------------------------------
+
+function updateShareBar() {
+  const total = journey.checkpoints.length;
+  const withAudio = journey.checkpoints.filter((cp) => cp.audioBlob).length;
+  const summary = el("journey-summary");
+  const button = el("publish-journey");
+  if (!summary || !button) return;
+
+  if (total === 0) {
+    summary.textContent = "Nothing to share yet";
+  } else if (withAudio === 0) {
+    summary.textContent = `${total} checkpoint${total === 1 ? "" : "s"} · no sound yet`;
+  } else {
+    summary.textContent =
+      `${total} checkpoint${total === 1 ? "" : "s"} · ${withAudio} with sound`;
+  }
+
+  button.disabled = withAudio === 0;
+}

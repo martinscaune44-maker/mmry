@@ -50,16 +50,18 @@
     <ul id="checkpoint-list"></ul>
   </div>
   <div id="share-box">
-    <button id="publish-journey" type="button">Share this journey</button>
+    <div id="share-bar">
+      <span id="journey-summary">Nothing to share yet</span>
+      <div class="share-actions">
+        <button id="clear-journey" class="danger" type="button">Clear</button>
+        <button id="publish-journey" type="button" disabled>Share</button>
+      </div>
+    </div>
     <p id="publish-status"></p>
     <div id="share-result">
       <input id="share-link" type="text" readonly />
       <button id="copy-link" type="button">Copy</button>
     </div>
-  </div>
-
-  <div id="file-actions">
-    <button id="clear-journey" class="danger" type="button">Clear all</button>
   </div>
 </div>
 
