@@ -398,58 +398,6 @@ el("add-here").addEventListener("click", () => {
   );
 });
 
-el("export-journey").addEventListener("click", async () => {
-  const json = await MmryTransfer.export(journey);
-  const filename = `${(journey.name || "journey")
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9-_]/g, "")}.mmry.json`;
-
-  // iOS ignores the download attribute, so a link-click silently does nothing
-  // there. The share sheet is the only route that reaches Files, Messages or
-  // AirDrop — and it is the nicer way to hand someone a journey anyway.
-  const file = new File([json], filename, { type: "application/json" });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: journey.name || "MMRY journey" });
-      return;
-    } catch (err) {
-      if (err.name === "AbortError") return; // user dismissed the sheet
-      console.warn("Share failed, falling back to download:", err);
-    }
-  }
-
-  const blob = new Blob([json], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  // Some browsers ignore clicks on anchors that were never in the document,
-  // and revoking the URL immediately can cancel the download in progress.
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 2000);
-});
-
-el("import-journey").addEventListener("click", () => el("import-input").click());
-
-el("import-input").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    journey = MmryTransfer.import(await file.text());
-    el("journey-name").value = journey.name;
-    persist();
-    render();
-    fitToCheckpoints();
-  } catch (err) {
-    alert(`Could not import: ${err.message}`);
-  }
-  e.target.value = "";
-});
-
 el("clear-journey").addEventListener("click", () => {
   if (!confirm("Delete all checkpoints and their audio? This cannot be undone.")) {
     return;

@@ -33,10 +33,13 @@ Drag a marker to move it.
 **Walk mode** — tap *Walk*, then *Start walking*, and it behaves exactly like
 the fixed demo.
 
-Journeys are saved in the browser on that device. **They are not uploaded
-anywhere and do not sync between devices** — clearing your browser data deletes
-them. Use *Export* to save a journey as a file and *Import* to load it on
-another device; that is the only sharing mechanism until there is a backend.
+**Sharing** — *Share this journey* uploads the audio, publishes the journey,
+and hands back a link. Anyone who opens it lands on `walk.html`, a walk-only
+page with no builder. Republishing mints a new link, since a published journey
+cannot be edited.
+
+While you are still building, a journey lives only in that browser. **Publish
+it to keep it** — clearing browser data deletes anything unpublished.
 
 ## Setting up your real zones
 
