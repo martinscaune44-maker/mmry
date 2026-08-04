@@ -68,7 +68,13 @@ button {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: var(--bg);
+  /* Matches the Voyager basemap's land colour. Tiles that have not arrived yet
+     show this through, so panning fades in rather than flashing black. */
+  background: #e8e5df;
+}
+
+.leaflet-container {
+  background: #e8e5df;
 }
 
 /* Leaflet's default attribution is visually loud for a full-bleed map. */

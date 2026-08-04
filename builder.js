@@ -30,6 +30,10 @@ const map = L.map("map").setView([57.0810, 24.3198], 15);
 L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
   maxZoom: 20,
   subdomains: "abcd",
+  // Hold a wider ring of tiles than the default 2, so panning runs out of
+  // loaded map far less often.
+  keepBuffer: 4,
+  updateWhenIdle: false,
   attribution:
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
 }).addTo(map);
@@ -249,25 +253,39 @@ function renderPlayer(cp) {
   fill.dataset.cp = cp.id;
   bar.appendChild(fill);
 
-  const seek = (event) => {
+  const ratioAt = (event) => {
     const rect = bar.getBoundingClientRect();
-    const point = event.touches ? event.touches[0].clientX : event.clientX;
-    const ratio = Math.min(Math.max((point - rect.left) / rect.width, 0), 1);
-    seekPreview(cp.id, ratio);
+    const ratio = (event.clientX - rect.left) / rect.width;
+    return Math.min(Math.max(ratio, 0), 1);
   };
 
+  // Seeking a MediaRecorder blob is not instant, so issuing one per pointermove
+  // queues dozens of them and the audio lags well behind the finger. The fill
+  // follows the drag immediately and the actual seek happens once, on release.
   bar.addEventListener("pointerdown", (event) => {
     event.preventDefault();
     bar.setPointerCapture(event.pointerId);
-    seek(event);
 
-    const onMove = (moveEvent) => seek(moveEvent);
+    let ratio = ratioAt(event);
+    scrubbingId = cp.id;
+    fill.style.width = `${ratio * 100}%`;
+
+    const onMove = (moveEvent) => {
+      ratio = ratioAt(moveEvent);
+      fill.style.width = `${ratio * 100}%`;
+    };
+
     const onUp = () => {
       bar.removeEventListener("pointermove", onMove);
       bar.removeEventListener("pointerup", onUp);
+      bar.removeEventListener("pointercancel", onUp);
+      scrubbingId = null;
+      seekPreview(cp.id, ratio);
     };
+
     bar.addEventListener("pointermove", onMove);
     bar.addEventListener("pointerup", onUp);
+    bar.addEventListener("pointercancel", onUp);
   });
 
   const replace = document.createElement("label");
@@ -648,6 +666,7 @@ window.addEventListener("pagehide", () => MmryRecorder.cancel());
 let previewingId = null;
 let previewAudio = null;
 let previewUrl = null;
+let scrubbingId = null;
 
 function stopPreview() {
   if (previewAudio) {
@@ -675,9 +694,12 @@ function togglePreview(checkpointId) {
 
   previewUrl = URL.createObjectURL(cp.audioBlob);
   previewAudio = new Audio(previewUrl);
+  previewAudio.preload = "auto";
   previewingId = checkpointId;
 
   previewAudio.addEventListener("timeupdate", () => {
+    // While dragging, the fill belongs to the finger, not to playback.
+    if (scrubbingId === checkpointId) return;
     const fill = document.querySelector(`.cp-progress-fill[data-cp="${checkpointId}"]`);
     const time = document.querySelector(`.cp-time[data-cp="${checkpointId}"]`);
     // Recorded blobs often report an unknown duration until they finish loading.
@@ -792,10 +814,12 @@ function renderSearchResults(places) {
     detail.textContent = parts.slice(1, 4).join(",").trim();
 
     button.append(name, detail);
-    button.addEventListener("click", () => {
-      map.setView([Number(place.lat), Number(place.lon)], 16);
-      el("place-search").value = parts[0].trim();
-      clearSearchResults();
+
+    // pointerdown, not click: the input's blur handler hides this list, and on a
+    // slow tap it was disappearing before the click ever landed.
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      goToPlace(place, parts[0].trim());
     });
 
     li.appendChild(button);
@@ -817,10 +841,50 @@ el("place-search").addEventListener("input", (e) => {
   searchTimer = setTimeout(() => runSearch(query), 400);
 });
 
-el("place-search").addEventListener("blur", () => {
-  // Delayed so a click on a result still lands before the list disappears.
-  setTimeout(clearSearchResults, 180);
+// Results are dismissed by choosing one or by tapping the map, rather than on
+// blur — blur races the tap that selects a result.
+map.on("click", clearSearchResults);
+
+el("place-search").addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    clearSearchResults();
+    el("place-search").blur();
+  }
 });
+
+// A pin, so choosing a place visibly puts it somewhere rather than just moving
+// the map to a patch of street that looks like any other.
+let searchMarker = null;
+
+function goToPlace(place, label) {
+  const lat = Number(place.lat);
+  const lng = Number(place.lon);
+
+  if (searchMarker) map.removeLayer(searchMarker);
+  searchMarker = L.marker([lat, lng], { opacity: 0.9 })
+    .addTo(map)
+    .bindPopup(`<strong>${label}</strong><br />Tap the map here to add a checkpoint`)
+    .openPopup();
+
+  // Nominatim gives a bounding box for the place, which frames a town properly
+  // rather than dropping you at an arbitrary zoom over its centre.
+  const box = place.boundingbox;
+  if (box && box.length === 4) {
+    map.fitBounds(
+      [
+        [Number(box[0]), Number(box[2])],
+        [Number(box[1]), Number(box[3])],
+      ],
+      { maxZoom: 17 }
+    );
+  } else {
+    map.setView([lat, lng], 16);
+  }
+
+  el("place-search").value = label;
+  el("place-search").blur();
+  clearSearchResults();
+}
 
 // ---- Centre on me ------------------------------------------------------------------
 
@@ -848,9 +912,16 @@ el("panel-toggle").addEventListener("click", () => {
   const collapsed = document.body.classList.toggle("panel-collapsed");
   el("panel-toggle").setAttribute("aria-expanded", String(!collapsed));
   el("panel-toggle").setAttribute("aria-label", collapsed ? "Show panel" : "Hide panel");
-  // Leaflet needs telling that its container changed size, or the map stays
-  // rendered at the old width.
-  setTimeout(() => map.invalidateSize(), 260);
+
+  // Leaflet only recalculates its size when told. Telling it once at the end
+  // left the map rendered at the old width for the whole animation and then
+  // snapping into place, so tell it on every frame while the panel moves.
+  const started = performance.now();
+  const follow = () => {
+    map.invalidateSize({ animate: false, pan: false });
+    if (performance.now() - started < 320) requestAnimationFrame(follow);
+  };
+  requestAnimationFrame(follow);
 });
 
 // Jump to a fraction of the clip. Starts it playing if it was not already, so a
