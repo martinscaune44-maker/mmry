@@ -167,14 +167,29 @@ function renderList() {
     radiusLabel.appendChild(radius);
     radiusLabel.append(" m");
 
+    // Recording in place is the primary way to add sound — you are standing
+    // where it belongs. Choosing a file is the secondary path.
+    const recordButton = document.createElement("button");
+    recordButton.type = "button";
+    recordButton.className = "cp-record";
+    recordButton.dataset.cp = cp.id;
+    const isThisRecording = recordingCheckpointId === cp.id;
+    recordButton.classList.toggle("recording", isThisRecording);
+    recordButton.textContent = isThisRecording
+      ? `■ Stop ${mmryFormatDuration(MmryRecorder.elapsedMs())}`
+      : cp.audioBlob
+      ? "● Re-record"
+      : "● Record here";
+    recordButton.addEventListener("click", () => toggleRecording(cp.id));
+    if (!MmryRecorder.supported()) recordButton.disabled = true;
+
     const audioLabel = document.createElement("label");
     audioLabel.className = "cp-audio";
-    audioLabel.textContent = cp.audioName ? `♪ ${cp.audioName}` : "Choose audio…";
+    audioLabel.textContent = cp.audioName ? `♪ ${cp.audioName}` : "or choose a file";
     const audioInput = document.createElement("input");
     audioInput.type = "file";
     // Listing concrete extensions as well as audio/* nudges iOS towards the
-    // Files app. With audio/* alone it offers the camera, and "Take Video"
-    // records a video that is not what anyone wanted.
+    // Files app rather than the camera.
     audioInput.accept =
       "audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus,.caf";
     audioInput.hidden = true;
@@ -188,7 +203,7 @@ function renderList() {
     });
     audioLabel.appendChild(audioInput);
 
-    meta.append(radiusLabel, audioLabel);
+    meta.append(radiusLabel, recordButton, audioLabel);
     li.append(row, meta);
     list.appendChild(li);
   });
@@ -526,3 +541,64 @@ el("copy-link").addEventListener("click", async () => {
     setPublishStatus("Press and hold the link to copy it.", "warn");
   }
 });
+
+// ---- Recording ------------------------------------------------------------------
+
+let recordingCheckpointId = null;
+let recordingTimer = null;
+
+function refreshRecordButton() {
+  const button = document.querySelector(
+    `.cp-record[data-cp="${recordingCheckpointId}"]`
+  );
+  if (button) {
+    button.textContent = `■ Stop ${mmryFormatDuration(MmryRecorder.elapsedMs())}`;
+  }
+}
+
+async function toggleRecording(checkpointId) {
+  // Stopping the one that is running.
+  if (recordingCheckpointId === checkpointId) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+
+    try {
+      const { blob, extension } = await MmryRecorder.stop();
+      const cp = findCheckpoint(checkpointId);
+      if (cp && blob.size > 0) {
+        cp.audioBlob = blob;
+        cp.audioName = `${cp.name.replace(/\s+/g, "-").toLowerCase()}.${extension}`;
+        persist();
+      }
+    } catch (err) {
+      console.warn("Recording failed:", err);
+    }
+
+    recordingCheckpointId = null;
+    renderList();
+    return;
+  }
+
+  // Switching checkpoints mid-recording would silently discard the take.
+  if (recordingCheckpointId !== null) {
+    await toggleRecording(recordingCheckpointId);
+  }
+
+  try {
+    await MmryRecorder.start();
+    recordingCheckpointId = checkpointId;
+    renderList();
+    recordingTimer = setInterval(refreshRecordButton, 500);
+  } catch (err) {
+    const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
+    setPublishStatus(
+      denied
+        ? "Microphone blocked. Allow microphone access for this site, then try again."
+        : `Couldn't start recording: ${err.message}`,
+      "warn"
+    );
+  }
+}
+
+// A recording left running when the tab is closed would hold the microphone open.
+window.addEventListener("pagehide", () => MmryRecorder.cancel());

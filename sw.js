@@ -11,7 +11,7 @@
 // Bump VERSION to retire old caches.
 // ---------------------------------------------------------------------------
 
-const VERSION = "v4";
+const VERSION = "v5";
 const SHELL_CACHE = `mmry-shell-${VERSION}`;
 const MEDIA_CACHE = `mmry-media-${VERSION}`;
 const TILE_CACHE = "mmry-tiles";
@@ -30,6 +30,7 @@ const SHELL_ASSETS = [
   "./builder.js",
   "./walk.js",
   "./share.js",
+  "./recorder.js",
   "./supabase-config.js",
   "./manifest.json",
   "./vendor/leaflet/leaflet.css",

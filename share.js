@@ -59,13 +59,19 @@ const MmryShare = {
       const ext = this.extensionFor(cp.audioBlob, cp.audioName);
       const path = `${journeyId}/${cp.id}.${ext}`;
 
+      // MediaRecorder reports types like "audio/mp4;codecs=opus". The bucket
+      // matches its allowed list exactly, so the codec parameter has to go.
+      const contentType = (cp.audioBlob.type || "audio/mpeg")
+        .split(";")[0]
+        .trim();
+
       const response = await fetch(
         `${SUPABASE_URL}/storage/v1/object/audio/${path}`,
         {
           method: "POST",
           headers: {
             ...this.headers(),
-            "Content-Type": cp.audioBlob.type || "audio/mpeg",
+            "Content-Type": contentType,
             "x-upsert": "true",
           },
           body: cp.audioBlob,
