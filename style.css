@@ -281,8 +281,11 @@ button {
 }
 
 #builder-link {
-  display: inline-block;
-  margin-top: 22px;
+  /* Block, not inline-block: beside a short button it would otherwise sit on
+     the same line rather than beneath it. */
+  display: block;
+  width: fit-content;
+  margin: 22px auto 0 auto;
   color: var(--text-faint);
   font-size: 14px;
   text-decoration: none;
@@ -854,4 +857,109 @@ body.builder .leaflet-top {
   50% {
     border-color: rgba(255, 92, 92, 0.25);
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Desktop
+   
+   A laptop cannot walk. Rather than stretching a phone screen across it, the
+   walk page becomes a handoff: here is what this journey is, scan to take it
+   outside. Building, by contrast, is genuinely better with a big map.
+   --------------------------------------------------------------------------- */
+
+#desktop-handoff {
+  display: none;
+}
+
+.handoff-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 20px 0;
+  color: var(--text-faint);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+
+.handoff-divider::before,
+.handoff-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+#qr-code {
+  width: 168px;
+  height: 168px;
+  margin: 0 auto;
+  padding: 10px;
+  background: #fff;
+  border-radius: var(--r-md);
+}
+
+#qr-code svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.handoff-note {
+  margin: 14px 0 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+@media (min-width: 900px) {
+  body.desktop #desktop-handoff {
+    display: block;
+  }
+
+  body.desktop #start-panel {
+    max-width: 380px;
+    background: rgba(23, 24, 26, 0.82);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 36px 32px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Let the map be visible around the card — it is the preview of the walk. */
+  body.desktop #start-overlay {
+    background: linear-gradient(
+      110deg,
+      rgba(14, 14, 15, 0.94) 0%,
+      rgba(14, 14, 15, 0.94) 34%,
+      rgba(14, 14, 15, 0.55) 55%,
+      rgba(14, 14, 15, 0.35) 100%
+    );
+    justify-content: flex-start;
+    padding-left: 6vw;
+  }
+
+  /* Walking here is possible but pointless, so it stops being the headline. */
+  body.desktop #start-button {
+    background: transparent;
+    color: var(--text-faint);
+    border: 1px solid var(--line);
+    box-shadow: none;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  body.desktop #start-button:disabled {
+    opacity: 0.5;
+  }
+}
+
+/* The status pill only means anything once a walk is under way. */
+#status-bar.pre-walk {
+  opacity: 0;
+  pointer-events: none;
 }

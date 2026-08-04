@@ -42,12 +42,23 @@
     <h1 id="journey-title">Loading…</h1>
     <p id="journey-blurb">Put on headphones, then walk — the sound starts when you arrive.</p>
     <button id="start-button" type="button" disabled>Start walking</button>
+
+    <div id="desktop-handoff">
+      <div class="handoff-divider"><span>to walk it</span></div>
+      <div id="qr-code" aria-hidden="true"></div>
+      <p class="handoff-note">
+        Scan with your phone camera.<br />
+        You need to be outdoors and moving for the sound to trigger.
+      </p>
+    </div>
+
     <a id="builder-link" href="builder.html">Make your own →</a>
   </div>
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="supabase-config.js"></script>
+<script src="vendor/qrcode/qrcode.js"></script>
 <script src="engine.js"></script>
 <script src="share.js"></script>
 <script src="walk.js"></script>

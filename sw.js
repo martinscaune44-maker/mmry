@@ -11,7 +11,7 @@
 // Bump VERSION to retire old caches.
 // ---------------------------------------------------------------------------
 
-const VERSION = "v7";
+const VERSION = "v8";
 const SHELL_CACHE = `mmry-shell-${VERSION}`;
 const MEDIA_CACHE = `mmry-media-${VERSION}`;
 const TILE_CACHE = "mmry-tiles";
@@ -35,6 +35,7 @@ const SHELL_ASSETS = [
   "./manifest.json",
   "./vendor/leaflet/leaflet.css",
   "./vendor/leaflet/leaflet.js",
+  "./vendor/qrcode/qrcode.js",
 ];
 
 self.addEventListener("install", (event) => {

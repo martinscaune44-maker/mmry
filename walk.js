@@ -15,6 +15,9 @@ const startButton = document.getElementById("start-button");
 const titleEl = document.getElementById("journey-title");
 const blurbEl = document.getElementById("journey-blurb");
 
+const statusBar = document.getElementById("status-bar");
+statusBar.classList.add("pre-walk");
+
 const map = L.map("map").setView([57.081058, 24.319797], 15);
 
 L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
@@ -54,6 +57,8 @@ async function boot() {
     blurbEl.textContent = err.message;
     return;
   }
+
+  zoneText.textContent = "Ready";
 
   titleEl.textContent = journey.name || "Untitled journey";
   const count = journey.checkpoints.length;
@@ -195,6 +200,8 @@ recenterButton.addEventListener("click", () => {
 
 startButton.addEventListener("click", () => {
   document.getElementById("start-overlay").classList.add("hidden");
+  statusBar.classList.remove("pre-walk");
+  zoneText.textContent = "Finding you…";
   MmryAudio.resume();
   MmryAudio.primeAll();
   requestWakeLock();
@@ -213,3 +220,40 @@ startButton.addEventListener("click", () => {
 });
 
 boot();
+
+// ---- Desktop handoff ------------------------------------------------------------
+// You cannot walk with a laptop, so on a wide screen the page stops pretending
+// otherwise: it shows what the journey is and hands it to a phone by QR.
+
+const DESKTOP_QUERY = "(min-width: 900px)";
+
+function isDesktop() {
+  return window.matchMedia(DESKTOP_QUERY).matches;
+}
+
+function renderQrCode() {
+  const holder = document.getElementById("qr-code");
+  if (!holder || holder.dataset.rendered === "true") return;
+
+  try {
+    // Type 0 lets the library pick a size; M correction survives a phone camera
+    // pointed at a screen.
+    const qr = qrcode(0, "M");
+    qr.addData(location.href);
+    qr.make();
+    holder.innerHTML = qr.createSvgTag({ cellSize: 5, margin: 2, scalable: true });
+    holder.dataset.rendered = "true";
+  } catch (err) {
+    console.warn("Could not render QR code:", err);
+    holder.remove();
+  }
+}
+
+function applyLayout() {
+  const desktop = isDesktop();
+  document.body.classList.toggle("desktop", desktop);
+  if (desktop) renderQrCode();
+}
+
+window.matchMedia(DESKTOP_QUERY).addEventListener("change", applyLayout);
+applyLayout();
