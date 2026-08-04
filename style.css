@@ -436,13 +436,21 @@ body.builder #status-bar {
   font-size: 13px;
 }
 
+/* The hint scrolls away with the list rather than pinning above it, where it
+   clipped list items against no visible boundary. */
+#panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Fades content out as it scrolls under the actions above. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
+}
+
 #checkpoint-list {
   list-style: none;
   margin: 0;
   padding: 0 16px;
-  overflow-y: auto;
-  flex: 1;
-  -webkit-overflow-scrolling: touch;
 }
 
 #checkpoint-list li {
@@ -805,7 +813,7 @@ body.builder .leaflet-top {
 
 /* iOS offers a camera for audio pickers, so say which option to take. */
 .panel-note {
-  margin: 0 16px 8px 16px;
+  margin: 4px 16px 10px 16px;
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-faint);
