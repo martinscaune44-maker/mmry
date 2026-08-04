@@ -11,7 +11,7 @@
 // Bump VERSION to retire old caches.
 // ---------------------------------------------------------------------------
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `mmry-shell-${VERSION}`;
 const MEDIA_CACHE = `mmry-media-${VERSION}`;
 const TILE_CACHE = "mmry-tiles";
@@ -116,7 +116,10 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  if (url.hostname.endsWith("tile.openstreetmap.org")) {
+  if (
+    url.hostname.endsWith("basemaps.cartocdn.com") ||
+    url.hostname.endsWith("tile.openstreetmap.org")
+  ) {
     event.respondWith(cacheFirst(request, TILE_CACHE, TILE_LIMIT));
     return;
   }

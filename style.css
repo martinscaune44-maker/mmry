@@ -686,3 +686,30 @@ body.builder .leaflet-top {
   border-radius: 50%;
   background: var(--accent);
 }
+
+/* Explains a blocked location permission, which is the most common failure and
+   the one the browser describes least usefully. */
+#location-help {
+  display: none;
+  margin: 0 16px 4px 16px;
+  padding: 10px 13px;
+  border-radius: var(--r-md);
+  background: rgba(60, 40, 12, 0.75);
+  border: 1px solid rgba(255, 176, 74, 0.28);
+  color: #ffd8a3;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#location-help.visible {
+  display: block;
+}
+
+/* On the demo page the help sits in the floating status stack rather than a
+   panel, so it needs its own width and pointer handling. */
+#status-bar #location-help {
+  margin: 0;
+  max-width: 92vw;
+  pointer-events: auto;
+  text-align: center;
+}

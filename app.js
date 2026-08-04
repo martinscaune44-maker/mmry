@@ -8,14 +8,18 @@ const zoneText = document.getElementById("zone-text");
 const distanceReadout = document.getElementById("distance-readout");
 const accuracyWarning = document.getElementById("accuracy-warning");
 const recenterButton = document.getElementById("recenter");
+const locationHelp = document.getElementById("location-help");
 
 // ---- Map setup -------------------------------------------------------------
 
 const map = L.map("map").setView([MAP_CENTER.lat, MAP_CENTER.lng], MAP_ZOOM);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: "&copy; OpenStreetMap contributors",
+// Dark basemap so the map does not glare white against the dark interface.
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 20,
+  subdomains: "abcd",
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
 }).addTo(map);
 
 const zoneCircleStyle = { color: "#3388ff", weight: 2, fillOpacity: 0.15 };
@@ -162,9 +166,9 @@ function onPositionError(err) {
   zoneIndicator.classList.add("no-zone");
   distanceReadout.classList.remove("visible");
   zoneText.textContent =
-    err.code === err.PERMISSION_DENIED
-      ? "Location permission denied"
-      : "Location unavailable";
+    err.code === err.PERMISSION_DENIED ? "Location blocked" : "Location unavailable";
+  locationHelp.textContent = mmryExplainLocationError(err);
+  locationHelp.classList.add("visible");
 }
 
 function startTracking() {

@@ -138,3 +138,33 @@ const MmryAudio = {
     }
   },
 };
+
+// ---------------------------------------------------------------------------
+// Location errors
+//
+// A blocked permission is the most common failure and the one browsers describe
+// least usefully — so name the setting rather than just reporting failure.
+// ---------------------------------------------------------------------------
+
+function mmryExplainLocationError(err) {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isChromeOnIOS = /CriOS/.test(navigator.userAgent);
+
+  if (err && err.code === err.PERMISSION_DENIED) {
+    if (isIOS && isChromeOnIOS) {
+      return (
+        "Chrome can't see your location. Open iOS Settings \u2192 Chrome \u2192 " +
+        "Location and choose \u201cWhile Using the App\u201d, then reload this page."
+      );
+    }
+    if (isIOS) {
+      return (
+        "Location is blocked. Tap \u201caA\u201d in the address bar \u2192 " +
+        "Website Settings \u2192 Location \u2192 Allow, then reload."
+      );
+    }
+    return "Location permission was denied. Allow it in your browser's site settings, then reload.";
+  }
+
+  return "Couldn't get a location fix. Step outside or wait a few seconds, then try again.";
+}

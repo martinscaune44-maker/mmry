@@ -24,9 +24,12 @@ let insideState = {}; // checkpoint id -> bool
 
 const map = L.map("map").setView([57.0810, 24.3198], 15);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: "&copy; OpenStreetMap contributors",
+// Dark basemap so the map does not glare white against the dark interface.
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 20,
+  subdomains: "abcd",
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
 }).addTo(map);
 
 const idleStyle = { color: "#3388ff", weight: 2, fillOpacity: 0.15 };
@@ -323,8 +326,9 @@ function onPositionError(err) {
   console.warn("Geolocation error:", err);
   el("zone-text").textContent =
     err.code === err.PERMISSION_DENIED
-      ? "Location permission denied"
+      ? "Location blocked"
       : "Location unavailable";
+  showLocationHelp(explainLocationError(err));
 }
 
 // ---- Controls ------------------------------------------------------------------
@@ -344,20 +348,32 @@ el("start-button").addEventListener("click", () => {
   map.invalidateSize();
 });
 
+const explainLocationError = mmryExplainLocationError;
+
+function showLocationHelp(message) {
+  const box = el("location-help");
+  box.textContent = message;
+  box.classList.add("visible");
+}
+
 el("add-here").addEventListener("click", () => {
-  if (!("geolocation" in navigator)) return;
+  if (!("geolocation" in navigator)) {
+    showLocationHelp("This browser doesn't support location.");
+    return;
+  }
+
+  el("location-help").classList.remove("visible");
   el("add-here").textContent = "Locating…";
+
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       addCheckpoint(pos.coords.latitude, pos.coords.longitude);
       map.setView([pos.coords.latitude, pos.coords.longitude], 17);
       el("add-here").textContent = "+ Add at my location";
     },
-    () => {
-      el("add-here").textContent = "Location unavailable";
-      setTimeout(() => {
-        el("add-here").textContent = "+ Add at my location";
-      }, 2000);
+    (err) => {
+      el("add-here").textContent = "+ Add at my location";
+      showLocationHelp(explainLocationError(err));
     },
     { enableHighAccuracy: true, timeout: 15000 }
   );
@@ -365,13 +381,37 @@ el("add-here").addEventListener("click", () => {
 
 el("export-journey").addEventListener("click", async () => {
   const json = await MmryTransfer.export(journey);
+  const filename = `${(journey.name || "journey")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9-_]/g, "")}.mmry.json`;
+
+  // iOS ignores the download attribute, so a link-click silently does nothing
+  // there. The share sheet is the only route that reaches Files, Messages or
+  // AirDrop — and it is the nicer way to hand someone a journey anyway.
+  const file = new File([json], filename, { type: "application/json" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: journey.name || "MMRY journey" });
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") return; // user dismissed the sheet
+      console.warn("Share failed, falling back to download:", err);
+    }
+  }
+
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${(journey.name || "journey").replace(/\s+/g, "-")}.mmry.json`;
+  a.download = filename;
+  // Some browsers ignore clicks on anchors that were never in the document,
+  // and revoking the URL immediately can cancel the download in progress.
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 2000);
 });
 
 el("import-journey").addEventListener("click", () => el("import-input").click());
