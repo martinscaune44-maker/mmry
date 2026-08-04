@@ -235,14 +235,40 @@ function renderPlayer(cp) {
   const time = document.createElement("span");
   time.className = "cp-time";
   time.dataset.cp = cp.id;
-  time.textContent = "";
+  time.textContent = "0:00";
 
+  // Scrubbable, like any music player — clicking two thirds along jumps two
+  // thirds in. Starts playback if it was not already running.
   const bar = document.createElement("div");
   bar.className = "cp-progress";
+  bar.dataset.cp = cp.id;
+  bar.setAttribute("role", "slider");
+  bar.setAttribute("aria-label", "Seek within recording");
   const fill = document.createElement("div");
   fill.className = "cp-progress-fill";
   fill.dataset.cp = cp.id;
   bar.appendChild(fill);
+
+  const seek = (event) => {
+    const rect = bar.getBoundingClientRect();
+    const point = event.touches ? event.touches[0].clientX : event.clientX;
+    const ratio = Math.min(Math.max((point - rect.left) / rect.width, 0), 1);
+    seekPreview(cp.id, ratio);
+  };
+
+  bar.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    bar.setPointerCapture(event.pointerId);
+    seek(event);
+
+    const onMove = (moveEvent) => seek(moveEvent);
+    const onUp = () => {
+      bar.removeEventListener("pointermove", onMove);
+      bar.removeEventListener("pointerup", onUp);
+    };
+    bar.addEventListener("pointermove", onMove);
+    bar.addEventListener("pointerup", onUp);
+  });
 
   const replace = document.createElement("label");
   replace.className = "cp-replace";
@@ -708,4 +734,147 @@ function updateShareBar() {
   }
 
   button.disabled = withAudio === 0;
+}
+
+// ---- Place search ----------------------------------------------------------------
+// Nominatim is OpenStreetMap's own geocoder: free, no key, but rate-limited to
+// roughly one request a second, hence the debounce and the minimum query length.
+
+let searchTimer = null;
+let searchAbort = null;
+
+function clearSearchResults() {
+  el("search-results").innerHTML = "";
+  el("search-results").classList.remove("visible");
+}
+
+async function runSearch(query) {
+  if (searchAbort) searchAbort.abort();
+  searchAbort = new AbortController();
+
+  const url =
+    "https://nominatim.openstreetmap.org/search?format=json&limit=6&q=" +
+    encodeURIComponent(query);
+
+  try {
+    const response = await fetch(url, { signal: searchAbort.signal });
+    if (!response.ok) throw new Error(response.statusText);
+    renderSearchResults(await response.json());
+  } catch (err) {
+    if (err.name !== "AbortError") console.warn("Search failed:", err);
+  }
+}
+
+function renderSearchResults(places) {
+  const list = el("search-results");
+  list.innerHTML = "";
+
+  if (places.length === 0) {
+    const li = document.createElement("li");
+    li.className = "search-empty";
+    li.textContent = "Nothing found";
+    list.appendChild(li);
+    list.classList.add("visible");
+    return;
+  }
+
+  places.forEach((place) => {
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+
+    // Nominatim returns one long comma-separated string; the first part is the
+    // name and the rest is context, which reads better split apart.
+    const parts = place.display_name.split(",");
+    const name = document.createElement("strong");
+    name.textContent = parts[0].trim();
+    const detail = document.createElement("span");
+    detail.textContent = parts.slice(1, 4).join(",").trim();
+
+    button.append(name, detail);
+    button.addEventListener("click", () => {
+      map.setView([Number(place.lat), Number(place.lon)], 16);
+      el("place-search").value = parts[0].trim();
+      clearSearchResults();
+    });
+
+    li.appendChild(button);
+    list.appendChild(li);
+  });
+
+  list.classList.add("visible");
+}
+
+el("place-search").addEventListener("input", (e) => {
+  const query = e.target.value.trim();
+  clearTimeout(searchTimer);
+
+  if (query.length < 3) {
+    clearSearchResults();
+    return;
+  }
+
+  searchTimer = setTimeout(() => runSearch(query), 400);
+});
+
+el("place-search").addEventListener("blur", () => {
+  // Delayed so a click on a result still lands before the list disappears.
+  setTimeout(clearSearchResults, 180);
+});
+
+// ---- Centre on me ------------------------------------------------------------------
+
+el("locate-me").addEventListener("click", () => {
+  const button = el("locate-me");
+  if (!("geolocation" in navigator)) return;
+
+  button.classList.add("locating");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      button.classList.remove("locating");
+      map.setView([pos.coords.latitude, pos.coords.longitude], 17);
+    },
+    (err) => {
+      button.classList.remove("locating");
+      showLocationHelp(explainLocationError(err));
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+});
+
+// ---- Collapsing the panel ----------------------------------------------------------
+
+el("panel-toggle").addEventListener("click", () => {
+  const collapsed = document.body.classList.toggle("panel-collapsed");
+  el("panel-toggle").setAttribute("aria-expanded", String(!collapsed));
+  el("panel-toggle").setAttribute("aria-label", collapsed ? "Show panel" : "Hide panel");
+  // Leaflet needs telling that its container changed size, or the map stays
+  // rendered at the old width.
+  setTimeout(() => map.invalidateSize(), 260);
+});
+
+// Jump to a fraction of the clip. Starts it playing if it was not already, so a
+// click on the bar behaves the way it does in a music player.
+function seekPreview(checkpointId, ratio) {
+  if (previewingId !== checkpointId) {
+    togglePreview(checkpointId);
+  }
+
+  // togglePreview re-renders, so the element to update is looked up afresh.
+  const apply = () => {
+    if (!previewAudio) return;
+    const duration = previewAudio.duration;
+    if (!Number.isFinite(duration) || duration <= 0) return;
+
+    previewAudio.currentTime = duration * ratio;
+
+    const fill = document.querySelector(`.cp-progress-fill[data-cp="${checkpointId}"]`);
+    if (fill) fill.style.width = `${ratio * 100}%`;
+  };
+
+  if (previewAudio && previewAudio.readyState > 0) {
+    apply();
+  } else if (previewAudio) {
+    previewAudio.addEventListener("loadedmetadata", apply, { once: true });
+  }
 }

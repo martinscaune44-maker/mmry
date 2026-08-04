@@ -26,6 +26,8 @@
   --r-lg: 18px;
   --r-pill: 999px;
 
+  --panel-w: 380px;
+
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 -8px 32px rgba(0, 0, 0, 0.5);
 
@@ -1003,7 +1005,10 @@ body.builder .leaflet-top {
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
-  min-width: 0;
+  /* Fixed width: otherwise the label appears mid-playback, reflows the row and
+     shifts the progress bar out from under a dragging finger. */
+  min-width: 62px;
+  text-align: right;
 }
 
 .cp-progress {
@@ -1075,12 +1080,18 @@ body.builder .leaflet-top {
    --------------------------------------------------------------------------- */
 
 @media (min-width: 900px) {
+  body.builder #top-bar,
+  body.builder #build-panel {
+    /* Left, leaving the right free for profiles and browsing later. */
+    left: 0;
+    right: auto;
+    width: var(--panel-w);
+    transition: transform 0.25s var(--ease);
+  }
+
   body.builder #top-bar {
-    left: auto;
-    right: 0;
-    width: 380px;
     background: var(--surface);
-    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
     padding: 16px;
     z-index: 1200;
   }
@@ -1088,14 +1099,11 @@ body.builder .leaflet-top {
   body.builder #build-panel {
     top: 0;
     bottom: 0;
-    left: auto;
-    right: 0;
-    width: 380px;
     max-height: none;
     border-radius: 0;
     border-top: none;
-    border-left: 1px solid var(--line);
-    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+    border-right: 1px solid var(--line);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
     padding-top: 74px; /* clear of the top bar, which floats above it */
     animation: none;
   }
@@ -1105,17 +1113,42 @@ body.builder .leaflet-top {
     display: none;
   }
 
-  body.builder #map {
-    right: 380px;
+  body.builder #map,
+  body.builder #status-bar {
+    left: var(--panel-w);
+    transition: left 0.25s var(--ease);
   }
 
   body.builder #status-bar {
-    right: 380px;
     top: 0;
   }
 
   body.builder .leaflet-top {
     top: 10px;
+  }
+
+  /* Collapsed: the panel slides out and the map takes the whole window. */
+  body.builder.panel-collapsed #top-bar,
+  body.builder.panel-collapsed #build-panel {
+    transform: translateX(-100%);
+  }
+
+  body.builder.panel-collapsed #map,
+  body.builder.panel-collapsed #status-bar {
+    left: 0;
+  }
+
+  body.builder #panel-toggle {
+    display: flex;
+    left: calc(var(--panel-w) + 14px);
+  }
+
+  body.builder.panel-collapsed #panel-toggle {
+    left: 14px;
+  }
+
+  body.builder.panel-collapsed #panel-toggle span {
+    transform: rotate(180deg);
   }
 
   /* More room per row than a phone, so the controls can breathe. */
@@ -1126,4 +1159,203 @@ body.builder .leaflet-top {
   body.builder .cp-player {
     padding-top: 12px;
   }
+}
+
+/* ---- Panel toggle and locate ------------------------------------------------ */
+
+#panel-toggle {
+  display: none; /* desktop only — a phone sheet is dismissed by other means */
+  position: absolute;
+  top: 14px;
+  z-index: 1300;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  background: rgba(23, 24, 26, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+  align-items: center;
+  justify-content: center;
+  transition: left 0.25s var(--ease), background 0.2s var(--ease);
+}
+
+#panel-toggle:hover {
+  background: var(--surface-high);
+}
+
+/* A chevron, drawn with borders rather than shipped as an icon. */
+#panel-toggle span {
+  width: 7px;
+  height: 7px;
+  border-left: 2px solid var(--text-dim);
+  border-bottom: 2px solid var(--text-dim);
+  transform: rotate(45deg);
+  margin-left: 3px;
+  transition: transform 0.25s var(--ease);
+}
+
+#locate-me {
+  position: absolute;
+  right: 14px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+  z-index: 1000;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(23, 24, 26, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#locate-me:active {
+  transform: scale(0.94);
+}
+
+#locate-me span {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid var(--text);
+  position: relative;
+}
+
+#locate-me span::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--zone);
+}
+
+#locate-me.locating span {
+  animation: locating 1s linear infinite;
+}
+
+@keyframes locating {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (min-width: 900px) {
+  body.builder #locate-me {
+    bottom: 28px;
+  }
+}
+
+/* ---- Place search ----------------------------------------------------------- */
+
+#search-box {
+  position: relative;
+  padding: 0 16px 10px 16px;
+}
+
+#place-search {
+  width: 100%;
+  background: var(--surface-high);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--text);
+  padding: 10px 13px;
+  font-size: 14px;
+  transition: border-color 0.2s var(--ease);
+}
+
+#place-search:focus {
+  outline: none;
+  border-color: var(--line-strong);
+}
+
+#place-search::placeholder {
+  color: var(--text-faint);
+}
+
+#search-results {
+  display: none;
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 100%;
+  z-index: 1400;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface-high);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+#search-results.visible {
+  display: block;
+}
+
+#search-results button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  color: var(--text);
+}
+
+#search-results button:hover,
+#search-results button:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#search-results strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#search-results span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-empty {
+  padding: 10px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+/* Wider hit area than its 3px look, since it is dragged as well as clicked. */
+.cp-progress {
+  cursor: pointer;
+  padding: 8px 0;
+  background: transparent;
+  height: auto;
+  touch-action: none;
+}
+
+.cp-progress::before {
+  content: "";
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.cp-progress-fill {
+  margin-top: -3px;
+  height: 3px;
+  border-radius: 2px;
 }

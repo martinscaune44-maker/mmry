@@ -20,6 +20,14 @@
 
 <div id="map"></div>
 
+<button id="panel-toggle" type="button" aria-label="Hide panel" aria-expanded="true">
+  <span aria-hidden="true"></span>
+</button>
+
+<button id="locate-me" type="button" aria-label="Centre on my location">
+  <span aria-hidden="true"></span>
+</button>
+
 <div id="top-bar">
   <input id="journey-name" type="text" placeholder="Untitled journey" />
   <div id="mode-toggle">
@@ -37,6 +45,12 @@
 
 <!-- Build mode -->
 <div id="build-panel">
+  <div id="search-box">
+    <input id="place-search" type="search" placeholder="Search for a place…"
+           autocomplete="off" spellcheck="false" />
+    <ul id="search-results"></ul>
+  </div>
+
   <div id="build-actions">
     <button id="add-here" type="button">+ Add at my location</button>
     <span class="hint">or tap the map</span>
