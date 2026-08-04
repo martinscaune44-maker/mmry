@@ -805,3 +805,16 @@ body.builder .leaflet-top {
   opacity: 0.45;
   box-shadow: none;
 }
+
+/* iOS offers a camera for audio pickers, so say which option to take. */
+.panel-note {
+  margin: 0 16px 8px 16px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+
+.panel-note strong {
+  color: var(--text-dim);
+  font-weight: 600;
+}

@@ -172,7 +172,11 @@ function renderList() {
     audioLabel.textContent = cp.audioName ? `♪ ${cp.audioName}` : "Choose audio…";
     const audioInput = document.createElement("input");
     audioInput.type = "file";
-    audioInput.accept = "audio/*";
+    // Listing concrete extensions as well as audio/* nudges iOS towards the
+    // Files app. With audio/* alone it offers the camera, and "Take Video"
+    // records a video that is not what anyone wanted.
+    audioInput.accept =
+      "audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus,.caf";
     audioInput.hidden = true;
     audioInput.addEventListener("change", () => {
       const file = audioInput.files[0];
