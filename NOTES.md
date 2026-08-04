@@ -162,6 +162,52 @@ which the current 8 MB track only just clears. Transcoding uploads to ~128kbps
 would roughly halve that with no audible difference outdoors — worth doing
 before real users arrive.
 
+### Web and native: how they relate
+
+**The web version is already cross-platform.** It runs on iPhone, Android and
+desktop, installs to a home screen, opens fullscreen without browser chrome,
+and works offline. Most people would not know it is not a native app.
+
+**Its one irreducible limit is background operation.** A browser cannot trigger
+with the phone pocketed and the screen off. Everything else a native app would
+buy — install, offline, recording, maps, audio, sharing — the web already does.
+
+**The native app is currently behind.** It has the map, builder, walking and
+local storage; it has none of the recording, publishing or sharing added later.
+Closing that gap is real work, and every future feature then has to be built
+twice.
+
+**Do not treat this as either/or.** Strava has a website and an app, and
+neither is the lesser version — they are different front doors. Same here:
+
+- **Web** is the front door. A link that works with no install is a genuine
+  advantage, and precisely the friction Detour died of. Someone taps a walk in
+  a chat and is walking it in ten seconds.
+- **App** is for people who walk often enough to want it on their home screen —
+  and for the credibility an App Store listing carries, which is a real
+  consideration in a pitch even though it is not a technical one.
+
+**Decision: cross-platform, via React Native and Expo.** Not native
+Swift/Kotlin.
+
+Reasons, in order of weight:
+
+1. **The code already exists and already runs.** `app/` is scaffolded and has
+   launched on a real iPhone.
+2. **It is JavaScript**, the same language as the web version, so the logic
+   carries over — the distance maths and enter/exit state machine are already
+   shared, not reimplemented.
+3. **One codebase covers both platforms.** Android testing is nearly free,
+   which matters given background triggering costs $99/year to test on iOS.
+4. **Nothing here needs native performance.** This is a map, a GPS listener and
+   an audio player. Flutter is a fine tool, but Dart is a new language and
+   nothing built so far would carry across.
+
+**Do not start until phone-in-pocket is the thing being asked for.** The
+signal to watch for: someone walks a real journey and says they had to keep
+looking at their phone. That is when the $99 and the porting work start
+earning their keep.
+
 ### Phase 3 — Native app ✅ Stage A working, walked and verified
 
 Expo app lives in [`app/`](app/). Map, journey builder, zone-triggered audio
