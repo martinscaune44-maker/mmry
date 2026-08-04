@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>MMRY — Walk</title>
+<meta name="description" content="A soundwalk someone made for you." />
+
+<meta name="theme-color" content="#0e0e0f" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="MMRY" />
+
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="status-bar">
+  <div id="zone-indicator" class="no-zone">
+    <span id="zone-dot"></span>
+    <span id="zone-text">Loading…</span>
+  </div>
+  <div id="distance-readout"></div>
+  <div id="accuracy-warning">Weak GPS signal — zones may trigger late</div>
+  <div id="location-help"></div>
+</div>
+
+<button id="recenter" type="button" aria-label="Recentre on my location">
+  <span aria-hidden="true"></span>
+</button>
+
+<div id="start-overlay">
+  <div id="start-panel">
+    <div class="mark" aria-hidden="true"></div>
+    <p class="eyebrow">A soundwalk for you</p>
+    <h1 id="journey-title">Loading…</h1>
+    <p id="journey-blurb">Put on headphones, then walk — the sound starts when you arrive.</p>
+    <button id="start-button" type="button" disabled>Start walking</button>
+    <a id="builder-link" href="builder.html">Make your own →</a>
+  </div>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="supabase-config.js"></script>
+<script src="engine.js"></script>
+<script src="share.js"></script>
+<script src="walk.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch((err) => {
+      console.warn("Service worker registration failed:", err);
+    });
+  }
+</script>
+</body>
+</html>

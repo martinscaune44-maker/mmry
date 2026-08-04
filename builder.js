@@ -461,3 +461,64 @@ MmryStore.load(JOURNEY_ID)
     console.warn("Could not load saved journey:", err);
     render();
   });
+
+// ---- Publishing ----------------------------------------------------------------
+
+const publishButton = el("publish-journey");
+const publishStatus = el("publish-status");
+const shareResult = el("share-result");
+const shareLinkInput = el("share-link");
+
+function setPublishStatus(message, tone = "") {
+  publishStatus.textContent = message;
+  publishStatus.className = tone;
+}
+
+publishButton.addEventListener("click", async () => {
+  const withAudio = journey.checkpoints.filter((cp) => cp.audioBlob);
+  if (withAudio.length === 0) {
+    setPublishStatus("Attach audio to at least one checkpoint first.", "warn");
+    return;
+  }
+
+  publishButton.disabled = true;
+  shareResult.classList.remove("visible");
+
+  try {
+    const { url } = await MmryShare.publish(journey, (step, total, label) => {
+      setPublishStatus(`${label}… (${step}/${total})`);
+    });
+
+    shareLinkInput.value = url;
+    shareResult.classList.add("visible");
+    setPublishStatus("Ready to send. Anyone with this link can walk it.", "ok");
+  } catch (err) {
+    setPublishStatus(err.message, "warn");
+  } finally {
+    publishButton.disabled = false;
+  }
+});
+
+el("copy-link").addEventListener("click", async () => {
+  const url = shareLinkInput.value;
+  if (!url) return;
+
+  // The share sheet is the better route on a phone — it reaches Messages and
+  // WhatsApp directly, which is how a walk actually gets sent to someone.
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: journey.name || "A soundwalk", url });
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(url);
+    setPublishStatus("Link copied.", "ok");
+  } catch (err) {
+    shareLinkInput.select();
+    setPublishStatus("Press and hold the link to copy it.", "warn");
+  }
+});

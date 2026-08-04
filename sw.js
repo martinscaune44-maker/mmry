@@ -11,7 +11,7 @@
 // Bump VERSION to retire old caches.
 // ---------------------------------------------------------------------------
 
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL_CACHE = `mmry-shell-${VERSION}`;
 const MEDIA_CACHE = `mmry-media-${VERSION}`;
 const TILE_CACHE = "mmry-tiles";
@@ -21,12 +21,16 @@ const SHELL_ASSETS = [
   "./",
   "./index.html",
   "./builder.html",
+  "./walk.html",
   "./style.css",
   "./engine.js",
   "./zones.js",
   "./app.js",
   "./storage.js",
   "./builder.js",
+  "./walk.js",
+  "./share.js",
+  "./supabase-config.js",
   "./manifest.json",
   "./vendor/leaflet/leaflet.css",
   "./vendor/leaflet/leaflet.js",
@@ -116,6 +120,8 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
+  // --- Cross-origin, cache-first ------------------------------------------
+
   if (
     url.hostname.endsWith("basemaps.cartocdn.com") ||
     url.hostname.endsWith("tile.openstreetmap.org")
@@ -124,7 +130,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Published journey audio lives on Supabase and never changes at a given
+  // URL, so it caches like local audio — a shared walk survives losing signal.
+  if (url.pathname.includes("/storage/v1/object/public/audio/")) {
+    event.respondWith(cacheFirst(request, MEDIA_CACHE));
+    return;
+  }
+
+  // Anything else cross-origin — API calls included — goes straight to network.
   if (url.origin !== self.location.origin) return;
+
+  // --- Same origin ---------------------------------------------------------
 
   if (url.pathname.includes("/audio/") || url.pathname.includes("/icons/")) {
     event.respondWith(cacheFirst(request, MEDIA_CACHE));

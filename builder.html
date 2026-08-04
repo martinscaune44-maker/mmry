@@ -43,9 +43,18 @@
   </div>
   <div id="location-help"></div>
   <ul id="checkpoint-list"></ul>
+  <div id="share-box">
+    <button id="publish-journey" type="button">Share this journey</button>
+    <p id="publish-status"></p>
+    <div id="share-result">
+      <input id="share-link" type="text" readonly />
+      <button id="copy-link" type="button">Copy</button>
+    </div>
+  </div>
+
   <div id="file-actions">
-    <button id="export-journey" class="secondary" type="button">Export</button>
-    <button id="import-journey" class="secondary" type="button">Import</button>
+    <button id="export-journey" class="secondary" type="button">Export file</button>
+    <button id="import-journey" class="secondary" type="button">Import file</button>
     <button id="clear-journey" class="danger" type="button">Clear all</button>
     <input id="import-input" type="file" accept=".json,application/json" hidden />
   </div>
@@ -62,7 +71,9 @@
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
+<script src="supabase-config.js"></script>
 <script src="engine.js"></script>
+<script src="share.js"></script>
 <script src="storage.js"></script>
 <script src="builder.js"></script>
 <script>
