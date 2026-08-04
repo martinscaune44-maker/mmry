@@ -57,6 +57,31 @@ Open `zones.js` and edit the `ZONES` array. Each zone needs:
 Add/remove entries for 3–4 zones total. Drop matching audio files into
 `audio/`.
 
+## Install it to your home screen
+
+Open the site on your phone, then:
+
+- **iPhone:** Share button → **Add to Home Screen**
+- **Android:** menu → **Install app** / **Add to Home screen**
+
+It then opens fullscreen with no browser chrome, which both looks like a real
+app and films better. It also works offline once you have opened it — a service
+worker caches the code, audio and map tiles, so a walk survives losing signal.
+
+### Updates and caching
+
+The service worker fetches code **network-first**, so a new deploy is live on
+the next load. No private tabs, no clearing browser data.
+
+The one exception is the very first load after this was introduced: the browser
+may still be holding the older HTML from before there was a worker. Load it
+once in a private tab (or pull-to-refresh), and every load after that updates
+by itself.
+
+Audio and map tiles are cached the other way round — cache-first, since they do
+not change — which is what makes offline walking work. Bump `VERSION` in
+`sw.js` to retire old caches.
+
 ## Testing on a phone — important
 
 Browsers only allow `navigator.geolocation` on a **secure context**: either

@@ -6,6 +6,8 @@
 const zoneIndicator = document.getElementById("zone-indicator");
 const zoneText = document.getElementById("zone-text");
 const distanceReadout = document.getElementById("distance-readout");
+const accuracyWarning = document.getElementById("accuracy-warning");
+const recenterButton = document.getElementById("recenter");
 
 // ---- Map setup -------------------------------------------------------------
 
@@ -43,6 +45,30 @@ if (ZONES.length > 0) {
 
 let userMarker = null;
 let userAccuracyCircle = null;
+let followUser = true;
+
+// ---- Screen wake lock --------------------------------------------------------
+// A browser cannot track location with the screen off, so the next best thing
+// is to stop the screen turning off during a walk. Supported on iOS 16.4+.
+
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener("release", () => {
+      wakeLock = null;
+    });
+  } catch (err) {
+    console.warn("Wake lock unavailable:", err);
+  }
+}
+
+// iOS drops the lock whenever the tab is backgrounded; take it again on return.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && !wakeLock) requestWakeLock();
+});
 
 // ---- Zone indicator UI ------------------------------------------------------
 
@@ -97,7 +123,12 @@ function onPosition(position) {
     userMarker.setLatLng([latitude, longitude]);
     userAccuracyCircle.setLatLng([latitude, longitude]);
     userAccuracyCircle.setRadius(accuracy);
+    if (followUser) map.panTo([latitude, longitude], { animate: true });
   }
+
+  // Poor GPS is the usual reason a zone "doesn't work", so say so rather than
+  // leaving the listener to guess.
+  accuracyWarning.classList.toggle("visible", accuracy > 30);
 
   let activeZoneName = null;
   let nearest = null;
@@ -149,10 +180,24 @@ function startTracking() {
   });
 }
 
+// Dragging the map means the listener wants to look around; stop yanking it
+// back. The recenter button opts back in.
+map.on("dragstart", () => {
+  followUser = false;
+  recenterButton.classList.add("visible");
+});
+
+recenterButton.addEventListener("click", () => {
+  followUser = true;
+  recenterButton.classList.remove("visible");
+  if (userMarker) map.panTo(userMarker.getLatLng(), { animate: true });
+});
+
 document.getElementById("start-button").addEventListener("click", () => {
   document.getElementById("start-overlay").classList.add("hidden");
   MmryAudio.resume();
   MmryAudio.primeAll();
   startTracking();
+  requestWakeLock();
   map.invalidateSize();
 });

@@ -2,8 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>MMRY — Journey Builder</title>
+
+<meta name="theme-color" content="#0e0e0f" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="MMRY" />
 
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
 <link rel="stylesheet" href="style.css" />
@@ -56,5 +64,14 @@
 <script src="engine.js"></script>
 <script src="storage.js"></script>
 <script src="builder.js"></script>
+<script>
+  // Registered immediately rather than on window load: that event waits for
+  // every map tile, so a slow network would delay caching indefinitely.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch((err) => {
+      console.warn("Service worker registration failed:", err);
+    });
+  }
+</script>
 </body>
 </html>

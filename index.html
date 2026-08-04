@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>MMRY Soundwalk Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>MMRY Soundwalk</title>
+<meta name="description" content="Music tied to places. The sound starts when you arrive." />
+
+<meta name="theme-color" content="#0e0e0f" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="MMRY" />
 
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
 <link rel="stylesheet" href="style.css" />
@@ -28,11 +37,25 @@
     <span id="zone-text">Waiting for location…</span>
   </div>
   <div id="distance-readout"></div>
+  <div id="accuracy-warning">Weak GPS signal — zones may trigger late</div>
 </div>
+
+<button id="recenter" type="button" aria-label="Recentre on my location">
+  <span aria-hidden="true"></span>
+</button>
 
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="engine.js"></script>
 <script src="zones.js"></script>
 <script src="app.js"></script>
+<script>
+  // Registered immediately rather than on window load: that event waits for
+  // every map tile, so a slow network would delay caching indefinitely.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch((err) => {
+      console.warn("Service worker registration failed:", err);
+    });
+  }
+</script>
 </body>
 </html>
