@@ -42,8 +42,9 @@ hosting bill.
 - **No background operation.** The browser tab must be open and the screen
   awake. Pocket the phone and tracking stops. iOS will not give background
   geolocation to a web page at all. This is a hard platform limit, not a bug.
-- **No offline support.** Audio is fetched over the network. Poor signal on a
-  walk means no sound.
+- ~~No offline support.~~ **Solved.** A service worker caches code, audio and
+  map tiles, so a walk survives losing signal. The site is also installable to a
+  home screen and opens fullscreen without browser chrome.
 - **Battery drain.** Continuous high-accuracy GPS is expensive.
 - **No sharing or sync.** Built journeys live in one browser on one device.
   Export/import files are the only way to move them.
