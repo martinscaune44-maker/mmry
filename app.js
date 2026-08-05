@@ -22,11 +22,14 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
   subdomains: "abcd",
   // Hold a wider ring of tiles than the default 2, so panning runs out of
   // loaded map far less often.
-  keepBuffer: 4,
+  keepBuffer: 6,
   updateWhenIdle: false,
   attribution:
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
 }).addTo(map);
+
+// Warm the zoom levels either side, so zooming does not start from blank tiles.
+MmryTiles.attach(map, "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png");
 
 const zoneCircleStyle = { color: "#3388ff", weight: 2, fillOpacity: 0.15 };
 const zoneCircleActiveStyle = { color: "#ff8c00", weight: 3, fillOpacity: 0.35 };

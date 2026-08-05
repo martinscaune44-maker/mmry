@@ -168,3 +168,75 @@ function mmryExplainLocationError(err) {
 
   return "Couldn't get a location fix. Step outside or wait a few seconds, then try again.";
 }
+
+// ---------------------------------------------------------------------------
+// Tile prefetching
+//
+// Leaflet keeps a ring of tiles around the viewport, which covers panning, but
+// it holds nothing for the zoom levels either side — so every zoom starts from
+// blank squares. This quietly requests the tiles one level in and one level out
+// once the map settles, so they are already in the browser (and the service
+// worker) cache by the time they are needed.
+// ---------------------------------------------------------------------------
+
+const MmryTiles = {
+  // Slippy-map tile coordinates, the same scheme every raster basemap uses.
+  xFor(lng, zoom) {
+    return Math.floor(((lng + 180) / 360) * Math.pow(2, zoom));
+  },
+
+  yFor(lat, zoom) {
+    const rad = (lat * Math.PI) / 180;
+    return Math.floor(
+      ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) *
+        Math.pow(2, zoom)
+    );
+  },
+
+  // Requesting the whole world at zoom+1 would be thousands of tiles, so this
+  // is capped and the neighbouring levels are done cheapest-first.
+  prefetch(map, template, { subdomains = "abcd", limit = 80 } = {}) {
+    const bounds = map.getBounds();
+    const zoom = Math.round(map.getZoom());
+    const retina = window.devicePixelRatio > 1 ? "@2x" : "";
+    let requested = 0;
+
+    [zoom + 1, zoom - 1].forEach((z) => {
+      if (z < 0 || z > 20 || requested >= limit) return;
+
+      const x1 = this.xFor(bounds.getWest(), z);
+      const x2 = this.xFor(bounds.getEast(), z);
+      const y1 = this.yFor(bounds.getNorth(), z);
+      const y2 = this.yFor(bounds.getSouth(), z);
+
+      for (let x = x1; x <= x2 && requested < limit; x++) {
+        for (let y = y1; y <= y2 && requested < limit; y++) {
+          const url = template
+            .replace("{s}", subdomains[requested % subdomains.length])
+            .replace("{z}", z)
+            .replace("{x}", x)
+            .replace("{y}", y)
+            .replace("{r}", retina);
+
+          // An Image is enough: the response lands in the HTTP and service
+          // worker caches, which is all Leaflet needs later.
+          const img = new Image();
+          img.src = url;
+          requested += 1;
+        }
+      }
+    });
+  },
+
+  // Runs after the map stops moving, so it never competes with tiles actually
+  // being displayed.
+  attach(map, template, options) {
+    let timer = null;
+    const schedule = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => this.prefetch(map, template, options), 400);
+    };
+    map.on("moveend zoomend", schedule);
+    schedule();
+  },
+};

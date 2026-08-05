@@ -32,11 +32,14 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
   subdomains: "abcd",
   // Hold a wider ring of tiles than the default 2, so panning runs out of
   // loaded map far less often.
-  keepBuffer: 4,
+  keepBuffer: 6,
   updateWhenIdle: false,
   attribution:
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
 }).addTo(map);
+
+// Warm the zoom levels either side, so zooming does not start from blank tiles.
+MmryTiles.attach(map, "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png");
 
 const idleStyle = { color: "#3388ff", weight: 2, fillOpacity: 0.15 };
 const activeStyle = { color: "#ff8c00", weight: 3, fillOpacity: 0.35 };
@@ -52,10 +55,10 @@ function newId() {
   return "cp-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
-function addCheckpoint(lat, lng) {
+function addCheckpoint(lat, lng, name) {
   journey.checkpoints.push({
     id: newId(),
-    name: `Checkpoint ${journey.checkpoints.length + 1}`,
+    name: name || `Checkpoint ${journey.checkpoints.length + 1}`,
     lat,
     lng,
     radius: DEFAULT_RADIUS,
@@ -861,9 +864,29 @@ function goToPlace(place, label) {
   const lng = Number(place.lon);
 
   if (searchMarker) map.removeLayer(searchMarker);
+
+  // Built as a node rather than an HTML string, so the button can carry a real
+  // handler and a place name containing an apostrophe cannot break the markup.
+  const popup = document.createElement("div");
+  popup.className = "search-popup";
+
+  const title = document.createElement("strong");
+  title.textContent = label;
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.textContent = "+ Add as checkpoint";
+  add.addEventListener("click", () => {
+    addCheckpoint(lat, lng, label);
+    map.removeLayer(searchMarker);
+    searchMarker = null;
+  });
+
+  popup.append(title, add);
+
   searchMarker = L.marker([lat, lng], { opacity: 0.9 })
     .addTo(map)
-    .bindPopup(`<strong>${label}</strong><br />Tap the map here to add a checkpoint`)
+    .bindPopup(popup)
     .openPopup();
 
   // Nominatim gives a bounding box for the place, which frames a town properly

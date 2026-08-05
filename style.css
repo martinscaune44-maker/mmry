@@ -1365,3 +1365,44 @@ body.builder .leaflet-top {
   height: 3px;
   border-radius: 2px;
 }
+
+/* ---- Search result popup ---------------------------------------------------- */
+
+.leaflet-popup-content-wrapper {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+}
+
+.leaflet-popup-tip {
+  background: var(--surface);
+}
+
+.leaflet-popup-close-button {
+  color: var(--text-faint) !important;
+}
+
+.search-popup strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 9px;
+  padding-right: 12px;
+}
+
+.search-popup button {
+  width: 100%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.search-popup button:active {
+  transform: scale(0.98);
+}
