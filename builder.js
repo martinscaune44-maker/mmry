@@ -70,8 +70,42 @@ function addCheckpoint(lat, lng, name) {
   render();
 }
 
+// A name the app generated, as opposed to one somebody typed.
+const DEFAULT_NAME = /^Checkpoint \d+$/;
+
+// The numbered badge counts positions, so a name still sitting at its default
+// has to follow it. Otherwise deleting the sixth checkpoint leaves badge 6
+// beside the name "Checkpoint 7", and a delete that worked looks like one that
+// went wrong. A name somebody typed is never touched.
+function renumberCheckpoints() {
+  journey.checkpoints.forEach((cp, index) => {
+    if (DEFAULT_NAME.test(cp.name || "")) cp.name = `Checkpoint ${index + 1}`;
+  });
+}
+
 function removeCheckpoint(id) {
-  journey.checkpoints = journey.checkpoints.filter((cp) => cp.id !== id);
+  const cp = findCheckpoint(id);
+  if (!cp) return;
+
+  // An empty checkpoint is worth nothing, so it goes immediately. One holding
+  // a recording is a take somebody walked somewhere to make, and there is no
+  // undo — that one asks first.
+  if (cp.audioBlob && !confirm(`Delete "${cp.name}" and its audio? This cannot be undone.`)) {
+    return;
+  }
+
+  // Deleting the checkpoint being recorded into would otherwise leave the
+  // microphone open with nowhere to put the take.
+  if (recordingCheckpointId === id) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+    recordingCheckpointId = null;
+    MmryRecorder.cancel();
+  }
+  if (previewingId === id) stopPreview();
+
+  journey.checkpoints = journey.checkpoints.filter((c) => c.id !== id);
+  renumberCheckpoints();
   persist();
   render();
 }
@@ -101,7 +135,9 @@ function renderMap() {
 
     const marker = L.marker([cp.lat, cp.lng], { draggable: mode === "build" })
       .addTo(map)
-      .bindPopup(cp.name);
+      .bindPopup(() => checkpointPopup(cp));
+
+    if (mode === "build") attachMapDelete(cp, marker, circle);
 
     marker.on("dragend", () => {
       const pos = marker.getLatLng();
@@ -113,6 +149,71 @@ function renderMap() {
     });
 
     markers[cp.id] = { marker, circle };
+  });
+}
+
+// The popup used to be the bare name, which put Leaflet's close "×" next to a
+// checkpoint with no way to delete it — so the close button read as a delete
+// button and did nothing. A real Delete sits beside it now.
+function checkpointPopup(cp) {
+  const wrap = document.createElement("div");
+  wrap.className = "cp-popup";
+
+  const name = document.createElement("span");
+  name.className = "cp-popup-name";
+  name.textContent = cp.name;
+  wrap.appendChild(name);
+
+  if (mode === "build") {
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "cp-popup-delete";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => removeCheckpoint(cp.id));
+    wrap.appendChild(del);
+  }
+
+  return wrap;
+}
+
+// Right-click on a desktop, press-and-hold on a phone. Both the pin and its
+// zone circle are targets, since the circle is the far bigger thing to hit.
+function attachMapDelete(cp, marker, circle) {
+  const onContextMenu = (event) => {
+    // Without this the browser's own menu opens over the map.
+    L.DomEvent.preventDefault(event.originalEvent || event);
+    removeCheckpoint(cp.id);
+  };
+
+  marker.on("contextmenu", onContextMenu);
+  circle.on("contextmenu", onContextMenu);
+
+  // Phones have no right-click, and Leaflet's synthetic contextmenu does not
+  // fire dependably on a marker icon in iOS Safari. A held press is the touch
+  // equivalent; dragging the pin cancels it, because touchmove fires first.
+  const icon = marker.getElement();
+  if (!icon) return;
+
+  let pressTimer = null;
+  const cancelPress = () => {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  };
+
+  icon.addEventListener(
+    "touchstart",
+    () => {
+      cancelPress();
+      pressTimer = setTimeout(() => {
+        pressTimer = null;
+        removeCheckpoint(cp.id);
+      }, 550);
+    },
+    { passive: true }
+  );
+
+  ["touchend", "touchmove", "touchcancel"].forEach((event) => {
+    icon.addEventListener(event, cancelPress, { passive: true });
   });
 }
 

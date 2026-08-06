@@ -1408,6 +1408,40 @@ body.builder .leaflet-top {
   transform: scale(0.98);
 }
 
+/* Checkpoint popup. The name and a real Delete, so Leaflet's close "×" is no
+   longer the only button in sight. */
+.cp-popup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 14px;
+}
+
+.cp-popup-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cp-popup-delete {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  border-radius: var(--r-pill);
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: color 0.2s var(--ease), border-color 0.2s var(--ease),
+    background 0.2s var(--ease);
+}
+
+.cp-popup-delete:hover,
+.cp-popup-delete:focus-visible {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: rgba(255, 92, 92, 0.1);
+}
+
 /* What the microphone actually gave us, not what was asked for. */
 .cp-specs {
   padding: 3px 0 0 34px;
