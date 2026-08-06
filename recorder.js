@@ -22,11 +22,14 @@ const MmryRecorder = {
     );
   },
 
-  // Browsers disagree about container support: Safari records mp4, Chrome and
-  // Firefox prefer webm/opus. Pick whichever the browser admits to.
+  // Ordered by how widely the result can be *played*, not by what is convenient
+  // to record. AAC in MP4 plays everywhere, so it comes first; asking for plain
+  // "audio/mp4" on Chrome yields Opus inside an MP4, which Safari may refuse —
+  // and a clip recorded on a laptop is meant to be walked on a phone.
   preferredType() {
     const candidates = [
-      "audio/mp4",
+      "audio/mp4;codecs=mp4a.40.2", // AAC — universally playable
+      "audio/mp4",                  // Safari gives AAC here; Chrome may give Opus
       "audio/webm;codecs=opus",
       "audio/webm",
       "audio/ogg;codecs=opus",
@@ -57,18 +60,34 @@ const MmryRecorder = {
   async start() {
     if (this.isRecording()) throw new Error("Already recording");
 
+    // Leaving ANY of echo cancellation, noise suppression or auto gain on sends
+    // the capture through the browser's voice-call pipeline, which downsamples
+    // to roughly 16 kHz mono — fine for a phone call, ruinous for music or
+    // ambience. All three off, and the full rate asked for explicitly.
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
         noiseSuppression: false,
-        autoGainControl: true,
+        autoGainControl: false,
+        channelCount: 2,
+        sampleRate: 48000,
+        sampleSize: 16,
       },
     });
 
+    const settings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
+    console.log(
+      `MMRY recording at ${settings.sampleRate || "?"} Hz, ` +
+        `${settings.channelCount || "?"} ch`
+    );
+
     const mimeType = this.preferredType();
-    this.recorder = mimeType
-      ? new MediaRecorder(this.stream, { mimeType })
-      : new MediaRecorder(this.stream);
+    // Without this MediaRecorder picks its own bitrate, which is conservative.
+    // 128 kbps keeps a few minutes comfortably inside the 10 MB upload cap.
+    const options = { audioBitsPerSecond: 128000 };
+    if (mimeType) options.mimeType = mimeType;
+
+    this.recorder = new MediaRecorder(this.stream, options);
 
     this.chunks = [];
     this.recorder.addEventListener("dataavailable", (event) => {
