@@ -213,6 +213,7 @@ function makeFileInput(cp) {
   input.addEventListener("change", () => {
     const file = input.files[0];
     if (!file) return;
+    cp.recorded = false;
     cp.audioBlob = file;
     cp.audioName = file.name;
     cp.audioSpecs = null;
@@ -415,8 +416,11 @@ async function describeClip(cp) {
     const channels = buffer.numberOfChannels === 1 ? "mono" : "stereo";
     const { peak, rms, peakLinear } = levelsOf(buffer);
     const hf = await highFrequencyShare(buffer);
+    // Only recordings are folded. A one-sided capture from a laptop microphone
+    // is a fault; a one-sided music file is how somebody mixed it, and quietly
+    // collapsing their stereo image would be wrong.
     const lopsided = channelImbalance(buffer);
-    cp.mono = lopsided;
+    cp.mono = lopsided && cp.recorded === true;
 
     // With auto gain off the device hands back whatever level it feels like,
     // which on a laptop is usually quiet. Rather than re-encoding the file, work
@@ -431,7 +435,11 @@ async function describeClip(cp) {
       `peak ${peak} dB · avg ${rms} dB` +
       (hf === null ? "" : ` · treble ${hf}%`) +
       (cp.gain > 1.05 ? ` · +${(20 * Math.log10(cp.gain)).toFixed(0)} dB applied` : "") +
-      (lopsided ? " · one channel — folded to centre" : "");
+      (lopsided
+        ? cp.mono
+          ? " · one channel — folded to centre"
+          : " · one channel (left as recorded)"
+        : "");
 
     const node = document.querySelector(`.cp-specs[data-cp="${cp.id}"]`);
     if (node) node.textContent = cp.audioSpecs;
@@ -774,6 +782,7 @@ async function toggleRecording(checkpointId) {
       const { blob, extension } = await MmryRecorder.stop();
       const cp = findCheckpoint(checkpointId);
       if (cp && blob.size > 0) {
+        cp.recorded = true;
         cp.audioBlob = blob;
         cp.audioName = `${cp.name.replace(/\s+/g, "-").toLowerCase()}.${extension}`;
         cp.audioSpecs = null;
