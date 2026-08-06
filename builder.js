@@ -317,21 +317,83 @@ function renderPlayer(cp) {
   return container;
 }
 
-// Decodes just enough of a clip to report its true sample rate and channel
-// count. Skipped for anything large, which would be slow and memory-hungry.
+// Loudest sample and average level, in dBFS. 0 dB is the ceiling; quieter is
+// more negative. Peak near 0 with a low average is a clipped, over-driven take.
+function levelsOf(buffer) {
+  let peak = 0;
+  let sumSquares = 0;
+  let count = 0;
+
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    const data = buffer.getChannelData(c);
+    // Every fourth sample is plenty for a level reading and four times faster.
+    for (let i = 0; i < data.length; i += 4) {
+      const v = Math.abs(data[i]);
+      if (v > peak) peak = v;
+      sumSquares += data[i] * data[i];
+      count += 1;
+    }
+  }
+
+  const rms = Math.sqrt(sumSquares / Math.max(count, 1));
+  const dB = (v) => (v > 0 ? Math.round(20 * Math.log10(v)) : -99);
+  return { peak: dB(peak), rms: dB(rms) };
+}
+
+// How much energy sits above 6 kHz. A recording that has been through a voice
+// pipeline is low-passed around 4–8 kHz and reads far lower here, even when the
+// file still claims a 44.1 kHz sample rate — which is exactly the case that
+// looks identical in the format line but sounds muffled.
+async function highFrequencyShare(buffer) {
+  const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!Offline) return null;
+
+  const offline = new Offline(1, buffer.length, buffer.sampleRate);
+  const source = offline.createBufferSource();
+  source.buffer = buffer;
+
+  const highpass = offline.createBiquadFilter();
+  highpass.type = "highpass";
+  highpass.frequency.value = 6000;
+  highpass.Q.value = 0.7;
+
+  source.connect(highpass);
+  highpass.connect(offline.destination);
+  source.start();
+
+  const filtered = await offline.startRendering();
+  const rmsOf = (buf) => {
+    const data = buf.getChannelData(0);
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 4) sum += data[i] * data[i];
+    return Math.sqrt(sum / Math.max(data.length / 4, 1));
+  };
+
+  const whole = rmsOf(buffer);
+  if (whole === 0) return 0;
+  return Math.round((rmsOf(filtered) / whole) * 100);
+}
+
+// Decodes a clip and reports what it actually contains — not just its format,
+// but its level and how much treble survived. Skipped for anything large.
 async function describeClip(cp) {
   if (!cp.audioBlob || cp.audioBlob.size > 20 * 1024 * 1024) return;
 
+  let ctx = null;
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new Ctx();
+    ctx = new Ctx();
     const buffer = await ctx.decodeAudioData(await cp.audioBlob.arrayBuffer());
+
     const kbps = Math.round((cp.audioBlob.size * 8) / buffer.duration / 1000);
     const channels = buffer.numberOfChannels === 1 ? "mono" : "stereo";
+    const { peak, rms } = levelsOf(buffer);
+    const hf = await highFrequencyShare(buffer);
 
     cp.audioSpecs =
-      `${(buffer.sampleRate / 1000).toFixed(1)} kHz · ${channels} · ${kbps} kbps`;
-    ctx.close();
+      `${(buffer.sampleRate / 1000).toFixed(1)} kHz · ${channels} · ${kbps} kbps · ` +
+      `peak ${peak} dB · avg ${rms} dB` +
+      (hf === null ? "" : ` · treble ${hf}%`);
 
     const node = document.querySelector(`.cp-specs[data-cp="${cp.id}"]`);
     if (node) node.textContent = cp.audioSpecs;
@@ -340,6 +402,9 @@ async function describeClip(cp) {
     console.warn("Could not read clip details:", err);
     const node = document.querySelector(`.cp-specs[data-cp="${cp.id}"]`);
     if (node) node.textContent = `couldn't read clip (${err.name || "error"})`;
+  } finally {
+    // Left open, these accumulate and can themselves affect the audio device.
+    if (ctx) ctx.close().catch(() => {});
   }
 }
 

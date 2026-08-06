@@ -70,16 +70,29 @@ const MmryRecorder = {
     // the capture through the browser's voice-call pipeline, which downsamples
     // to roughly 16 kHz mono — fine for a phone call, ruinous for music or
     // ambience. All three off, and the full rate asked for explicitly.
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        channelCount: 2,
-        sampleRate: 48000,
-        sampleSize: 16,
-      },
-    });
+    // `false` is a preference the browser may quietly ignore; `{ exact: false }`
+    // makes it a requirement, so a browser that insists on voice processing
+    // fails loudly here instead of silently degrading the recording.
+    const strict = {
+      echoCancellation: { exact: false },
+      noiseSuppression: { exact: false },
+      autoGainControl: { exact: false },
+      channelCount: 2,
+      sampleRate: 48000,
+    };
+
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: strict });
+    } catch (err) {
+      console.warn("Strict audio constraints refused, falling back:", err.name);
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+    }
 
     const track = this.stream.getAudioTracks()[0];
     const settings = track?.getSettings?.() || {};
