@@ -90,7 +90,11 @@ async function boot() {
 
   // Buffer the audio before the walk starts rather than on arrival.
   MmryAudio.setup(
-    journey.checkpoints.map((cp) => ({ id: cp.id, src: cp.audioUrl }))
+    journey.checkpoints.map((cp) => ({
+      id: cp.id,
+      src: cp.audioUrl,
+      gain: cp.gain,
+    }))
   );
 
   startButton.disabled = false;

@@ -73,11 +73,13 @@ const MmryRecorder = {
     // `false` is a preference the browser may quietly ignore; `{ exact: false }`
     // makes it a requirement, so a browser that insists on voice processing
     // fails loudly here instead of silently degrading the recording.
+    // No channelCount: asking a mono laptop microphone for two channels gets
+    // you the signal in the left and silence in the right. Letting the device
+    // report its own count means mono stays mono and plays centred.
     const strict = {
       echoCancellation: { exact: false },
       noiseSuppression: { exact: false },
       autoGainControl: { exact: false },
-      channelCount: 2,
       sampleRate: 48000,
     };
 

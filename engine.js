@@ -34,14 +34,15 @@ const MmryAudio = {
   ctx: null,
   tracks: {},
 
-  // sources: [{ id, src }]
+  // sources: [{ id, src, gain }] — gain normalises a quiet recording, since
+  // capture runs with auto gain off and hands back whatever level it likes.
   setup(sources) {
     if (this.ctx) this.teardown();
 
     const Ctx = window.AudioContext || window.webkitAudioContext;
     this.ctx = new Ctx();
 
-    sources.forEach(({ id, src }) => {
+    sources.forEach(({ id, src, gain: boost }) => {
       const audio = new Audio(src);
       audio.loop = false;
       // Fetched ahead of time: clips can be several MB, and downloading on
@@ -60,7 +61,13 @@ const MmryAudio = {
       node.connect(gain);
       gain.connect(this.ctx.destination);
 
-      this.tracks[id] = { audio, gain, desiredPlaying: false, stopTimer: null };
+      this.tracks[id] = {
+        audio,
+        gain,
+        boost: Number.isFinite(boost) && boost > 0 ? boost : 1,
+        desiredPlaying: false,
+        stopTimer: null,
+      };
     });
   },
 
@@ -95,9 +102,10 @@ const MmryAudio = {
     if (!track || !this.ctx) return;
 
     const now = this.ctx.currentTime;
+    const level = targetVolume * track.boost;
     track.gain.gain.cancelScheduledValues(now);
     track.gain.gain.setValueAtTime(track.gain.gain.value, now);
-    track.gain.gain.linearRampToValueAtTime(targetVolume, now + durationMs / 1000);
+    track.gain.gain.linearRampToValueAtTime(level, now + durationMs / 1000);
 
     if (track.stopTimer) {
       clearTimeout(track.stopTimer);

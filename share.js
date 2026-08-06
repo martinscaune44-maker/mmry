@@ -110,6 +110,7 @@ const MmryShare = {
         lng: cp.lng,
         radius: cp.radius,
         fadeMs: cp.fadeMs,
+        gain: cp.gain || 1,
         audioPath: path,
       });
     }

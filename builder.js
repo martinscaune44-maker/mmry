@@ -216,6 +216,7 @@ function makeFileInput(cp) {
     cp.audioBlob = file;
     cp.audioName = file.name;
     cp.audioSpecs = null;
+    cp.gain = 1;
     persist();
     renderList();
   });
@@ -337,7 +338,7 @@ function levelsOf(buffer) {
 
   const rms = Math.sqrt(sumSquares / Math.max(count, 1));
   const dB = (v) => (v > 0 ? Math.round(20 * Math.log10(v)) : -99);
-  return { peak: dB(peak), rms: dB(rms) };
+  return { peak: dB(peak), rms: dB(rms), peakLinear: peak };
 }
 
 // How much energy sits above 6 kHz. A recording that has been through a voice
@@ -390,13 +391,22 @@ async function describeClip(cp) {
 
     const kbps = Math.round((cp.audioBlob.size * 8) / buffer.duration / 1000);
     const channels = buffer.numberOfChannels === 1 ? "mono" : "stereo";
-    const { peak, rms } = levelsOf(buffer);
+    const { peak, rms, peakLinear } = levelsOf(buffer);
     const hf = await highFrequencyShare(buffer);
+
+    // With auto gain off the device hands back whatever level it feels like,
+    // which on a laptop is usually quiet. Rather than re-encoding the file, work
+    // out the boost that would bring its loudest moment just under the ceiling
+    // and store it — playback applies it, here and on the published walk.
+    cp.gain = peakLinear > 0
+      ? Math.min(Math.max(0.891 / peakLinear, 1), 8) // 0.891 ≈ -1 dBFS
+      : 1;
 
     cp.audioSpecs =
       `${(buffer.sampleRate / 1000).toFixed(1)} kHz · ${channels} · ${kbps} kbps · ` +
       `peak ${peak} dB · avg ${rms} dB` +
-      (hf === null ? "" : ` · treble ${hf}%`);
+      (hf === null ? "" : ` · treble ${hf}%`) +
+      (cp.gain > 1.05 ? ` · +${(20 * Math.log10(cp.gain)).toFixed(0)} dB applied` : "");
 
     const node = document.querySelector(`.cp-specs[data-cp="${cp.id}"]`);
     if (node) node.textContent = cp.audioSpecs;
@@ -742,6 +752,7 @@ async function toggleRecording(checkpointId) {
         cp.audioBlob = blob;
         cp.audioName = `${cp.name.replace(/\s+/g, "-").toLowerCase()}.${extension}`;
         cp.audioSpecs = null;
+        cp.gain = 1;
         persist();
       }
     } catch (err) {
@@ -785,6 +796,7 @@ let previewingId = null;
 let previewAudio = null;
 let previewUrl = null;
 let scrubbingId = null;
+let previewContext = null;
 
 function stopPreview() {
   if (previewAudio) {
@@ -798,6 +810,10 @@ function stopPreview() {
   if (previewUrl) {
     URL.revokeObjectURL(previewUrl);
     previewUrl = null;
+  }
+  if (previewContext) {
+    previewContext.close().catch(() => {});
+    previewContext = null;
   }
   previewingId = null;
 }
@@ -818,6 +834,24 @@ function togglePreview(checkpointId) {
   previewAudio = new Audio(previewUrl);
   previewAudio.preload = "auto";
   previewingId = checkpointId;
+
+  // Element volume caps at 1, so a quiet recording cannot be lifted through it.
+  // Routing through a gain node applies the same boost the published walk uses,
+  // so the preview is what the listener will actually hear.
+  if (cp.gain && cp.gain > 1.01) {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      previewContext = new Ctx();
+      const source = previewContext.createMediaElementSource(previewAudio);
+      const gainNode = previewContext.createGain();
+      gainNode.gain.value = cp.gain;
+      source.connect(gainNode);
+      gainNode.connect(previewContext.destination);
+    } catch (err) {
+      console.warn("Could not apply preview gain:", err);
+      previewContext = null;
+    }
+  }
 
   // Bound to this element rather than the module-level reference: stopPreview
   // nulls that, and an event already queued would then fire against nothing.
@@ -861,6 +895,11 @@ async function silenceAudioOutput() {
   if (analysisContext) {
     await analysisContext.close().catch(() => {});
     analysisContext = null;
+  }
+
+  if (previewContext) {
+    await previewContext.close().catch(() => {});
+    previewContext = null;
   }
 
   // Any <audio> the page created, whether or not we still hold a reference.
