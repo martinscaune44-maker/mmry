@@ -305,6 +305,52 @@ investors find the achievable version more credible.
 
 ---
 
+## 4b. Recent work and the current backlog
+
+**Done since the builder shipped:**
+
+- Light basemap (Voyager). A dark map under dark chrome read as one black smear.
+- Playback per checkpoint, with a scrubbable progress bar — publishing audio
+  nobody has listened to was the worst gap in the builder.
+- Share bar replaced the full-width button: states what exists ("2 checkpoints ·
+  1 with sound") and disables until there is something to share.
+- Desktop layout: panel on the **left**, collapsible, map takes the rest. Left
+  deliberately, so the right stays free for profiles and browsing.
+- Place search (Nominatim, debounced) with a pin and an "add as checkpoint"
+  button; centre-on-me button.
+- Tile prefetching for the zoom levels either side, so zooming does not start
+  from blank squares.
+- Installable as a home-screen app, works offline.
+
+**Audio findings, all learned the hard way — see `BRIEF.md` for the list.**
+The short version: any of echo cancellation / noise suppression / auto gain left
+on downsamples capture to telephone quality; asking a mono microphone for stereo
+pans everything left; Windows degrades the microphone mid-recording if playback
+is open, and pausing an `<audio>` element does not release it. Clips now report
+their real sample rate, level and treble content, and quiet ones are normalised
+by a stored gain applied at playback rather than re-encoding.
+
+**Backlog, in the order agreed:**
+
+1. **Accounts and profiles** — Supabase Auth. Unlocks "my walks" and seeing
+   other people's.
+2. **Public/private toggle per journey** — *decided*, not built. Must land with
+   accounts, not after: it changes the schema, and today's model is
+   private-by-obscurity.
+3. **Tags and filters** — musical, funny, atmospheric, morning, late night. Easy
+   once accounts exist. The tone words are the differentiator; no existing
+   audio-tour product would tag anything "funny".
+4. **Search walks by area** — deliberately last. See §7 on Detour.
+5. **Moderation** — becomes necessary the moment strangers can find walks.
+6. **Photos alongside audio.**
+
+**Deferred deliberately:** making the web builder app-only and pointing the site
+at a download. Right instinct, wrong moment — there is no app to download, the
+web builder is the only way anyone can create, and gating creation would
+strangle supply.
+
+---
+
 ## 5. What to do next
 
 In order. Cheapest and most informative first.
