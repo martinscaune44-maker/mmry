@@ -34,15 +34,16 @@ const MmryAudio = {
   ctx: null,
   tracks: {},
 
-  // sources: [{ id, src, gain }] — gain normalises a quiet recording, since
-  // capture runs with auto gain off and hands back whatever level it likes.
+  // sources: [{ id, src, gain, mono }] — gain normalises a quiet recording,
+  // since capture runs with auto gain off and hands back whatever level it
+  // likes; mono folds a clip whose signal sits in one channel back to centre.
   setup(sources) {
     if (this.ctx) this.teardown();
 
     const Ctx = window.AudioContext || window.webkitAudioContext;
     this.ctx = new Ctx();
 
-    sources.forEach(({ id, src, gain: boost }) => {
+    sources.forEach(({ id, src, gain: boost, mono }) => {
       const audio = new Audio(src);
       audio.loop = false;
       // Fetched ahead of time: clips can be several MB, and downloading on
@@ -58,7 +59,22 @@ const MmryAudio = {
       const node = this.ctx.createMediaElementSource(audio);
       const gain = this.ctx.createGain();
       gain.gain.value = 0;
-      node.connect(gain);
+
+      if (mono) {
+        // Some laptop microphones report stereo while feeding only the left
+        // channel, so the recording plays entirely in one ear. Forcing the
+        // graph through a single channel folds it back to centre; the
+        // destination then spreads that mono across both speakers.
+        const fold = this.ctx.createGain();
+        fold.channelCount = 1;
+        fold.channelCountMode = "explicit";
+        fold.channelInterpretation = "speakers";
+        node.connect(fold);
+        fold.connect(gain);
+      } else {
+        node.connect(gain);
+      }
+
       gain.connect(this.ctx.destination);
 
       this.tracks[id] = {

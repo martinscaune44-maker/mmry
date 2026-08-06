@@ -73,13 +73,16 @@ const MmryRecorder = {
     // `false` is a preference the browser may quietly ignore; `{ exact: false }`
     // makes it a requirement, so a browser that insists on voice processing
     // fails loudly here instead of silently degrading the recording.
-    // No channelCount: asking a mono laptop microphone for two channels gets
-    // you the signal in the left and silence in the right. Letting the device
-    // report its own count means mono stays mono and plays centred.
+    // Mono, explicitly. Laptops routinely report a stereo input while only one
+    // capsule feeds the left channel, which is heard as everything panned left —
+    // and leaving the count unconstrained does not help, because the device
+    // still hands back two channels. A soundwalk wants one centred channel
+    // anyway, and it halves the file size.
     const strict = {
       echoCancellation: { exact: false },
       noiseSuppression: { exact: false },
       autoGainControl: { exact: false },
+      channelCount: { exact: 1 },
       sampleRate: 48000,
     };
 
@@ -92,6 +95,7 @@ const MmryRecorder = {
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,
+          channelCount: { ideal: 1 },
         },
       });
     }

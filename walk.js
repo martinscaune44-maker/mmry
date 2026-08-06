@@ -94,6 +94,7 @@ async function boot() {
       id: cp.id,
       src: cp.audioUrl,
       gain: cp.gain,
+      mono: cp.mono,
     }))
   );
 

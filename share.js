@@ -111,6 +111,7 @@ const MmryShare = {
         radius: cp.radius,
         fadeMs: cp.fadeMs,
         gain: cp.gain || 1,
+        mono: Boolean(cp.mono),
         audioPath: path,
       });
     }

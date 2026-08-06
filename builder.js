@@ -375,6 +375,28 @@ async function highFrequencyShare(buffer) {
   return Math.round((rmsOf(filtered) / whole) * 100);
 }
 
+// True when a stereo clip carries real signal in one channel and near-silence in
+// the other — a laptop microphone reporting stereo it does not actually have.
+function channelImbalance(buffer) {
+  if (buffer.numberOfChannels < 2) return false;
+
+  const energy = [];
+  for (let c = 0; c < 2; c++) {
+    const data = buffer.getChannelData(c);
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 4) sum += data[i] * data[i];
+    energy.push(Math.sqrt(sum / Math.max(data.length / 4, 1)));
+  }
+
+  const [a, b] = energy;
+  const louder = Math.max(a, b);
+  const quieter = Math.min(a, b);
+  if (louder === 0) return false;
+
+  // More than about 12 dB apart is not a stereo image, it is a dead channel.
+  return quieter / louder < 0.25;
+}
+
 // Decodes a clip and reports what it actually contains — not just its format,
 // but its level and how much treble survived. Skipped for anything large.
 let analysisContext = null;
@@ -393,6 +415,8 @@ async function describeClip(cp) {
     const channels = buffer.numberOfChannels === 1 ? "mono" : "stereo";
     const { peak, rms, peakLinear } = levelsOf(buffer);
     const hf = await highFrequencyShare(buffer);
+    const lopsided = channelImbalance(buffer);
+    cp.mono = lopsided;
 
     // With auto gain off the device hands back whatever level it feels like,
     // which on a laptop is usually quiet. Rather than re-encoding the file, work
@@ -406,7 +430,8 @@ async function describeClip(cp) {
       `${(buffer.sampleRate / 1000).toFixed(1)} kHz · ${channels} · ${kbps} kbps · ` +
       `peak ${peak} dB · avg ${rms} dB` +
       (hf === null ? "" : ` · treble ${hf}%`) +
-      (cp.gain > 1.05 ? ` · +${(20 * Math.log10(cp.gain)).toFixed(0)} dB applied` : "");
+      (cp.gain > 1.05 ? ` · +${(20 * Math.log10(cp.gain)).toFixed(0)} dB applied` : "") +
+      (lopsided ? " · one channel — folded to centre" : "");
 
     const node = document.querySelector(`.cp-specs[data-cp="${cp.id}"]`);
     if (node) node.textContent = cp.audioSpecs;
@@ -753,6 +778,7 @@ async function toggleRecording(checkpointId) {
         cp.audioName = `${cp.name.replace(/\s+/g, "-").toLowerCase()}.${extension}`;
         cp.audioSpecs = null;
         cp.gain = 1;
+        cp.mono = false;
         persist();
       }
     } catch (err) {
@@ -838,14 +864,25 @@ function togglePreview(checkpointId) {
   // Element volume caps at 1, so a quiet recording cannot be lifted through it.
   // Routing through a gain node applies the same boost the published walk uses,
   // so the preview is what the listener will actually hear.
-  if (cp.gain && cp.gain > 1.01) {
+  if ((cp.gain && cp.gain > 1.01) || cp.mono) {
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       previewContext = new Ctx();
       const source = previewContext.createMediaElementSource(previewAudio);
       const gainNode = previewContext.createGain();
-      gainNode.gain.value = cp.gain;
-      source.connect(gainNode);
+      gainNode.gain.value = cp.gain || 1;
+
+      if (cp.mono) {
+        const fold = previewContext.createGain();
+        fold.channelCount = 1;
+        fold.channelCountMode = "explicit";
+        fold.channelInterpretation = "speakers";
+        source.connect(fold);
+        fold.connect(gainNode);
+      } else {
+        source.connect(gainNode);
+      }
+
       gainNode.connect(previewContext.destination);
     } catch (err) {
       console.warn("Could not apply preview gain:", err);
