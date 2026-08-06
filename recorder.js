@@ -60,6 +60,12 @@ const MmryRecorder = {
   async start() {
     if (this.isRecording()) throw new Error("Already recording");
 
+    // A previous take may have only just let go of the microphone. Re-acquiring
+    // in the same tick can return a device still in its old state, so make sure
+    // it is fully released first.
+    this.release();
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
     // Leaving ANY of echo cancellation, noise suppression or auto gain on sends
     // the capture through the browser's voice-call pipeline, which downsamples
     // to roughly 16 kHz mono — fine for a phone call, ruinous for music or
@@ -75,11 +81,17 @@ const MmryRecorder = {
       },
     });
 
-    const settings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
-    console.log(
-      `MMRY recording at ${settings.sampleRate || "?"} Hz, ` +
-        `${settings.channelCount || "?"} ch`
-    );
+    const track = this.stream.getAudioTracks()[0];
+    const settings = track?.getSettings?.() || {};
+    this.lastSettings = settings;
+    console.log("MMRY capture:", {
+      device: settings.deviceId ? String(settings.deviceId).slice(0, 8) : "?",
+      sampleRate: settings.sampleRate,
+      channels: settings.channelCount,
+      echoCancellation: settings.echoCancellation,
+      noiseSuppression: settings.noiseSuppression,
+      autoGainControl: settings.autoGainControl,
+    });
 
     const mimeType = this.preferredType();
     // Without this MediaRecorder picks its own bitrate, which is conservative.

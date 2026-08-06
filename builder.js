@@ -309,7 +309,7 @@ function renderPlayer(cp) {
   const specs = document.createElement("div");
   specs.className = "cp-specs";
   specs.dataset.cp = cp.id;
-  specs.textContent = cp.audioSpecs || "";
+  specs.textContent = cp.audioSpecs || "reading clip…";
   container.append(specs);
 
   if (!cp.audioSpecs) describeClip(cp);
@@ -338,6 +338,8 @@ async function describeClip(cp) {
     persist();
   } catch (err) {
     console.warn("Could not read clip details:", err);
+    const node = document.querySelector(`.cp-specs[data-cp="${cp.id}"]`);
+    if (node) node.textContent = `couldn't read clip (${err.name || "error"})`;
   }
 }
 

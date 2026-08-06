@@ -11,7 +11,7 @@
 // Bump VERSION to retire old caches.
 // ---------------------------------------------------------------------------
 
-const VERSION = "v14";
+const VERSION = "v15";
 const SHELL_CACHE = `mmry-shell-${VERSION}`;
 const MEDIA_CACHE = `mmry-media-${VERSION}`;
 const TILE_CACHE = "mmry-tiles";
