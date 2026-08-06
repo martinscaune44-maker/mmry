@@ -376,6 +376,8 @@ async function highFrequencyShare(buffer) {
 
 // Decodes a clip and reports what it actually contains — not just its format,
 // but its level and how much treble survived. Skipped for anything large.
+let analysisContext = null;
+
 async function describeClip(cp) {
   if (!cp.audioBlob || cp.audioBlob.size > 20 * 1024 * 1024) return;
 
@@ -383,6 +385,7 @@ async function describeClip(cp) {
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     ctx = new Ctx();
+    analysisContext = ctx;
     const buffer = await ctx.decodeAudioData(await cp.audioBlob.arrayBuffer());
 
     const kbps = Math.round((cp.audioBlob.size * 8) / buffer.duration / 1000);
@@ -404,7 +407,10 @@ async function describeClip(cp) {
     if (node) node.textContent = `couldn't read clip (${err.name || "error"})`;
   } finally {
     // Left open, these accumulate and can themselves affect the audio device.
-    if (ctx) ctx.close().catch(() => {});
+    if (ctx) {
+      await ctx.close().catch(() => {});
+      if (analysisContext === ctx) analysisContext = null;
+    }
   }
 }
 
@@ -783,6 +789,10 @@ let scrubbingId = null;
 function stopPreview() {
   if (previewAudio) {
     previewAudio.pause();
+    // Pausing keeps the output device open. Detaching the source releases it.
+    previewAudio.removeAttribute("src");
+    previewAudio.srcObject = null;
+    previewAudio.load();
     previewAudio = null;
   }
   if (previewUrl) {
@@ -809,29 +819,33 @@ function togglePreview(checkpointId) {
   previewAudio.preload = "auto";
   previewingId = checkpointId;
 
-  previewAudio.addEventListener("timeupdate", () => {
+  // Bound to this element rather than the module-level reference: stopPreview
+  // nulls that, and an event already queued would then fire against nothing.
+  const audio = previewAudio;
+
+  audio.addEventListener("timeupdate", () => {
     // While dragging, the fill belongs to the finger, not to playback.
     if (scrubbingId === checkpointId) return;
     const fill = document.querySelector(`.cp-progress-fill[data-cp="${checkpointId}"]`);
     const time = document.querySelector(`.cp-time[data-cp="${checkpointId}"]`);
     // Recorded blobs often report an unknown duration until they finish loading.
-    const known = Number.isFinite(previewAudio.duration) && previewAudio.duration > 0;
+    const known = Number.isFinite(audio.duration) && audio.duration > 0;
     if (fill && known) {
-      fill.style.width = `${(previewAudio.currentTime / previewAudio.duration) * 100}%`;
+      fill.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
     }
     if (time) {
       time.textContent = known
-        ? `${mmryFormatDuration(previewAudio.currentTime * 1000)} / ${mmryFormatDuration(previewAudio.duration * 1000)}`
-        : mmryFormatDuration(previewAudio.currentTime * 1000);
+        ? `${mmryFormatDuration(audio.currentTime * 1000)} / ${mmryFormatDuration(audio.duration * 1000)}`
+        : mmryFormatDuration(audio.currentTime * 1000);
     }
   });
 
-  previewAudio.addEventListener("ended", () => {
+  audio.addEventListener("ended", () => {
     stopPreview();
     renderList();
   });
 
-  previewAudio.play().catch((err) => {
+  audio.play().catch((err) => {
     console.warn("Could not play back:", err);
     stopPreview();
     renderList();
@@ -841,9 +855,30 @@ function togglePreview(checkpointId) {
 }
 
 // Recording something new should not leave an old preview running underneath.
-const originalToggleRecording = toggleRecording;
-toggleRecording = function (checkpointId) {
+async function silenceAudioOutput() {
   stopPreview();
+
+  if (analysisContext) {
+    await analysisContext.close().catch(() => {});
+    analysisContext = null;
+  }
+
+  // Any <audio> the page created, whether or not we still hold a reference.
+  document.querySelectorAll("audio").forEach((el) => {
+    el.pause();
+    el.removeAttribute("src");
+    el.load();
+  });
+}
+
+const originalToggleRecording = toggleRecording;
+toggleRecording = async function (checkpointId) {
+  // Only when starting: stopping a take must not be delayed.
+  if (recordingCheckpointId !== checkpointId) {
+    await silenceAudioOutput();
+  } else {
+    stopPreview();
+  }
   return originalToggleRecording(checkpointId);
 };
 
