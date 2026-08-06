@@ -1406,3 +1406,12 @@ body.builder .leaflet-top {
 .search-popup button:active {
   transform: scale(0.98);
 }
+
+/* What the microphone actually gave us, not what was asked for. */
+.cp-specs {
+  padding: 3px 0 0 34px;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  min-height: 14px;
+}

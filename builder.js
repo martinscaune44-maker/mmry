@@ -215,6 +215,7 @@ function makeFileInput(cp) {
     if (!file) return;
     cp.audioBlob = file;
     cp.audioName = file.name;
+    cp.audioSpecs = null;
     persist();
     renderList();
   });
@@ -238,6 +239,7 @@ function renderPlayer(cp) {
   const label = document.createElement("span");
   label.className = "cp-filename";
   label.textContent = cp.audioName || "recording";
+  if (cp.audioSpecs) label.title = cp.audioSpecs;
 
   const time = document.createElement("span");
   time.className = "cp-time";
@@ -297,7 +299,46 @@ function renderPlayer(cp) {
   replace.appendChild(makeFileInput(cp));
 
   wrap.append(play, label, time, bar, replace);
-  return wrap;
+
+  const container = document.createElement("div");
+  container.append(wrap);
+
+  // What was actually captured, rather than what was asked for. Constraints are
+  // requests, not guarantees, and this is the difference between diagnosing a
+  // quality problem and speculating about one.
+  const specs = document.createElement("div");
+  specs.className = "cp-specs";
+  specs.dataset.cp = cp.id;
+  specs.textContent = cp.audioSpecs || "";
+  container.append(specs);
+
+  if (!cp.audioSpecs) describeClip(cp);
+
+  return container;
+}
+
+// Decodes just enough of a clip to report its true sample rate and channel
+// count. Skipped for anything large, which would be slow and memory-hungry.
+async function describeClip(cp) {
+  if (!cp.audioBlob || cp.audioBlob.size > 20 * 1024 * 1024) return;
+
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    const buffer = await ctx.decodeAudioData(await cp.audioBlob.arrayBuffer());
+    const kbps = Math.round((cp.audioBlob.size * 8) / buffer.duration / 1000);
+    const channels = buffer.numberOfChannels === 1 ? "mono" : "stereo";
+
+    cp.audioSpecs =
+      `${(buffer.sampleRate / 1000).toFixed(1)} kHz · ${channels} · ${kbps} kbps`;
+    ctx.close();
+
+    const node = document.querySelector(`.cp-specs[data-cp="${cp.id}"]`);
+    if (node) node.textContent = cp.audioSpecs;
+    persist();
+  } catch (err) {
+    console.warn("Could not read clip details:", err);
+  }
 }
 
 function renderList() {
@@ -627,6 +668,7 @@ async function toggleRecording(checkpointId) {
       if (cp && blob.size > 0) {
         cp.audioBlob = blob;
         cp.audioName = `${cp.name.replace(/\s+/g, "-").toLowerCase()}.${extension}`;
+        cp.audioSpecs = null;
         persist();
       }
     } catch (err) {
