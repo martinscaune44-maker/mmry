@@ -45,6 +45,11 @@
 
 <!-- Build mode -->
 <div id="build-panel">
+  <div id="account-bar">
+    <span id="account-who">Not signed in</span>
+    <a id="account-action" href="account.html">Sign in</a>
+  </div>
+
   <div id="search-box">
     <input id="place-search" type="search" placeholder="Search for a place…"
            autocomplete="off" spellcheck="false" />
@@ -64,6 +69,19 @@
     <ul id="checkpoint-list"></ul>
   </div>
   <div id="share-box">
+    <div id="share-meta">
+      <div class="meta-label">Tags</div>
+      <div id="tag-chips" role="group" aria-label="Tags"></div>
+
+      <label class="meta-label" for="visibility">Who can open it</label>
+      <select id="visibility">
+        <option value="unlisted">Anyone with the link</option>
+        <option value="public">Public — listed once search exists</option>
+        <option value="private">Only me</option>
+      </select>
+      <p id="visibility-note"></p>
+    </div>
+
     <div id="share-bar">
       <span id="journey-summary">Nothing to share yet</span>
       <div class="share-actions">
@@ -92,6 +110,7 @@
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="supabase-config.js"></script>
 <script src="engine.js"></script>
+<script src="auth.js"></script>
 <script src="share.js"></script>
 <script src="recorder.js"></script>
 <script src="storage.js"></script>

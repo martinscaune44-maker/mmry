@@ -129,11 +129,33 @@ builder hands back a link, and recipients land on `walk.html?j=<id>` — a walk
 page with no builder UI. Published audio is cached by the service worker, so a
 shared walk survives losing signal too.
 
-**No accounts yet, deliberately.** The link is the credential. Nothing can edit
-or delete a published journey, so republishing mints a new link. That trade
-buys link sharing without an auth system; it costs orphaned rows and means a
-walk cannot be corrected after sending. Accounts earn their place when editing
-matters, or when someone wants to see everything they have made.
+**Accounts now exist, and are optional.** Building, recording and publishing
+all still work signed out — a login form in front of the thing itself would be
+the fastest way to kill supply. Signing in adds ownership on top: your walks
+collect on `account.html`, and you can change who may open them or delete them
+outright. Signed-out publishes stay unowned and unlisted, exactly as before.
+
+**Three visibility states, not two.** A two-state public/private toggle would
+have broken the product: "private" meaning "only I can open it" would make
+every walk you *sent* unopenable, and the link from a friend is the only
+distribution this thing has. So:
+
+| State | Who can open it |
+|---|---|
+| private | only its owner, signed in |
+| unlisted | anyone with the link — the default, and what every pre-account row already is |
+| public | anyone with the link, and listed once discovery exists |
+
+YouTube's model, for the same reason. `supabase/schema-accounts.sql` holds the
+migration; the read policy hides a private row rather than refusing it, so the
+existence of somebody's private walk never leaks — which is why walk.html
+cannot tell "private" from "deleted" and says so honestly.
+
+**Sign-in by password, magic link or Google.** Email confirmation is on, so
+signing up sends a link before there is a session — the UI has to say "check
+your inbox" or it looks broken. Sign in with Apple needs a Services ID, which
+needs the paid Apple Developer Program; `MmryAuth.signInWithApple()` is written
+and unreachable until that account exists.
 
 **Recording happens in the app.** Tap *Record here* at a checkpoint and capture
 sound on the spot — no Files app, no picking a track made elsewhere. This came
@@ -145,11 +167,22 @@ time-capsule and friend's-walk framings both depend on.
 
 Still open:
 
-1. User accounts and editing published journeys
+1. Editing a published journey's *content* — visibility, tags and deletion are
+   owner-controlled now, but the checkpoints themselves are still write-once
 2. Photos as well as audio
 3. **Discovery — browse walks by area.** Deliberately last, see below.
 4. Moderation — user-uploaded audio at public coordinates will eventually
    need it
+
+**Dashboard setup this depends on** (one-time, in the Supabase console):
+
+- Run `supabase/schema-accounts.sql` in the SQL Editor. Safe to re-run.
+- Authentication → URL Configuration → add the deployed `account.html` to the
+  redirect allow list, or emailed links land on the site root instead.
+- Authentication → Providers → Google, to switch that button on. Needs a Google
+  Cloud OAuth client first.
+- The built-in mailer is rate-limited on the free tier, so confirmation and
+  magic-link emails are throttled — fine for testing, not for launch.
 
 **On discovery.** A browsable catalogue of walks is exactly what Detour was,
 and exactly what sank it (section 7). It is also a bad demo before there is
@@ -332,17 +365,30 @@ by a stored gain applied at playback rather than re-encoding.
 
 **Backlog, in the order agreed:**
 
-1. **Accounts and profiles** — Supabase Auth. Unlocks "my walks" and seeing
-   other people's.
-2. **Public/private toggle per journey** — *decided*, not built. Must land with
-   accounts, not after: it changes the schema, and today's model is
-   private-by-obscurity.
-3. **Tags and filters** — musical, funny, atmospheric, morning, late night. Easy
-   once accounts exist. The tone words are the differentiator; no existing
-   audio-tour product would tag anything "funny".
+1. ~~**Accounts**~~ ✅ Supabase Auth over plain fetch (`auth.js`), password /
+   magic link / Google, with "My walks" on `account.html`. Profiles — a display
+   name others see — deliberately left out: nothing reads one until discovery
+   exists, and it cannot be designed before then.
+2. ~~**Public/private toggle per journey**~~ ✅ landed with accounts as planned,
+   as three states rather than two (see Phase 2).
+3. ~~**Tags and filters**~~ ✅ a closed vocabulary — musical, funny,
+   atmospheric, morning, late night, historical, personal — capped at five per
+   walk. Closed rather than free text because free tags fragment into
+   funny/Funny/comedy on day one and then need moderating. Filtering only
+   offers tags actually in use, so the row is never a set of dead ends. The
+   tone words remain the differentiator; no existing audio-tour product would
+   tag anything "funny".
 4. **Search walks by area** — deliberately last. See §7 on Detour.
 5. **Moderation** — becomes necessary the moment strangers can find walks.
 6. **Photos alongside audio.**
+
+**Checkpoint deletion, fixed.** The map popup used to be the bare checkpoint
+name, which left Leaflet's own close "×" as the only button in it — so it read
+as a delete and did nothing. Worth remembering as a general lesson: a control
+that looks like the one you need is worse than no control at all. There is now
+a real Delete in the popup, right-click on the pin or its circle, and a held
+press on touch. Names renumber after a delete too, since a frozen name beside a
+renumbered badge made a working delete look broken.
 
 **Deferred deliberately:** making the web builder app-only and pointing the site
 at a download. Right instinct, wrong moment — there is no app to download, the

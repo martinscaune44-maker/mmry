@@ -1450,3 +1450,427 @@ body.builder .leaflet-top {
   font-variant-numeric: tabular-nums;
   min-height: 14px;
 }
+
+/* ---- Tags ------------------------------------------------------------------
+   One chip per tag, from a closed vocabulary. Free text fragments immediately
+   into funny / Funny / comedy, and moderating that is not built. */
+
+.chip {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  border-radius: var(--r-pill);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: color 0.2s var(--ease), border-color 0.2s var(--ease),
+    background 0.2s var(--ease);
+}
+
+.chip:hover:not(.on) {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.chip.small {
+  padding: 3px 9px;
+  font-size: 11px;
+}
+
+.chip:disabled {
+  opacity: 0.5;
+}
+
+/* ---- Account bar in the builder -------------------------------------------- */
+
+#account-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+#account-who {
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#account-action {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+#account-action:hover {
+  text-decoration: underline;
+}
+
+/* ---- Tags and visibility in the share box ---------------------------------- */
+
+#share-meta {
+  padding: 10px 16px 0 16px;
+}
+
+.meta-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 7px;
+}
+
+#tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+#visibility {
+  width: 100%;
+  background: var(--surface-high);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+#visibility option:disabled {
+  color: var(--text-faint);
+}
+
+#visibility-note {
+  margin: 6px 0 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-faint);
+  min-height: 15px;
+}
+
+/* ---- Account page ----------------------------------------------------------
+   The one page in the app that scrolls the document rather than a panel: it is
+   a list of arbitrary length, not a map with furniture on top. */
+
+body.account {
+  overflow: auto;
+  height: auto;
+  min-height: 100%;
+}
+
+#account-page {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 24px 18px 64px 18px;
+}
+
+#account-head {
+  margin-bottom: 22px;
+}
+
+#account-head .back {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--text-dim);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+#account-head .back:hover {
+  color: var(--text);
+}
+
+#account-head h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  margin: 0 0 22px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+/* ---- Sign-in form ---------------------------------------------------------- */
+
+#sign-in-form label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin: 0 0 6px 0;
+}
+
+#sign-in-form input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  font-size: 15px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s var(--ease);
+}
+
+#sign-in-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-actions,
+.alt-signin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.alt-signin {
+  flex-direction: column;
+}
+
+#account-page button {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform 0.15s var(--ease), opacity 0.2s var(--ease);
+}
+
+#account-page button:active {
+  transform: scale(0.98);
+}
+
+#account-page button:disabled {
+  opacity: 0.5;
+}
+
+#account-page button.secondary {
+  background: var(--surface-high);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font-weight: 600;
+}
+
+#account-page button.danger {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+#account-page button.danger:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+#account-page button.linky {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+#account-page button.linky:hover {
+  color: var(--text);
+}
+
+#account-page .chip {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+#account-page .chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.or {
+  margin: 20px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+#auth-status,
+#walks-status {
+  margin: 16px 0 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  min-height: 18px;
+}
+
+#auth-status.ok,
+#walks-status.ok {
+  color: #7fd67f;
+}
+
+#auth-status.warn,
+#walks-status.warn {
+  color: var(--danger);
+}
+
+/* ---- The list of walks ------------------------------------------------------ */
+
+#account-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+
+#signed-in-as {
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#walk-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#walk-list {
+  list-style: none;
+  margin: 18px 0 0 0;
+  padding: 0;
+}
+
+#walk-list .empty {
+  padding: 28px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-faint);
+}
+
+.walk {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: 15px;
+  margin-bottom: 12px;
+}
+
+.walk-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 11px;
+}
+
+.walk-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.walk-count {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.walk-link {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.walk-link input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  border-radius: var(--r-sm);
+  padding: 8px 11px;
+  font-size: 12px;
+}
+
+.walk-link button {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.walk-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 13px;
+}
+
+.walk-controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.walk-controls select {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-high);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.walk-controls button {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+@media (min-width: 900px) {
+  #account-page {
+    padding-top: 48px;
+  }
+
+  .form-actions {
+    flex-wrap: nowrap;
+  }
+
+  .alt-signin {
+    flex-direction: row;
+  }
+
+  .alt-signin button {
+    flex: 1;
+  }
+}

@@ -63,7 +63,10 @@ async function boot() {
   try {
     journey = await MmryShare.load(id);
   } catch (err) {
-    titleEl.textContent = "Couldn't load";
+    // A private walk and a missing one look identical from here on purpose —
+    // the read policy hides the row rather than refusing it, so the existence
+    // of somebody's private walk never leaks.
+    titleEl.textContent = err.code === "not-visible" ? "Not available" : "Couldn't load";
     blurbEl.textContent = err.message;
     return;
   }

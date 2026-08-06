@@ -11,7 +11,13 @@ const JOURNEY_ID = "current";
 
 const el = (id) => document.getElementById(id);
 
-let journey = { id: JOURNEY_ID, name: "", checkpoints: [] };
+let journey = {
+  id: JOURNEY_ID,
+  name: "",
+  visibility: "unlisted",
+  tags: [],
+  checkpoints: [],
+};
 let mode = "build";
 let markers = {}; // checkpoint id -> { marker, circle }
 let objectUrls = [];
@@ -771,7 +777,13 @@ el("clear-journey").addEventListener("click", () => {
   if (!confirm("Delete all checkpoints and their audio? This cannot be undone.")) {
     return;
   }
-  journey = { id: JOURNEY_ID, name: journey.name, checkpoints: [] };
+  journey = {
+    id: JOURNEY_ID,
+    name: journey.name,
+    visibility: journey.visibility || "unlisted",
+    tags: journey.tags || [],
+    checkpoints: [],
+  };
   persist();
   render();
 });
@@ -796,6 +808,10 @@ MmryStore.load(JOURNEY_ID)
   .catch((err) => {
     console.warn("Could not load saved journey:", err);
     render();
+  })
+  .finally(() => {
+    renderAccountBar();
+    renderTagChips();
   });
 
 // ---- Publishing ----------------------------------------------------------------
@@ -810,6 +826,17 @@ function setPublishStatus(message, tone = "") {
   publishStatus.className = tone;
 }
 
+el("visibility").addEventListener("change", () => {
+  journey.visibility = el("visibility").value;
+  persist();
+  updateVisibilityControl();
+});
+
+// Signing in happens on another page, so this fires when coming back to a tab
+// that was left open.
+MmryAuth.onChange(renderAccountBar);
+window.addEventListener("pageshow", renderAccountBar);
+
 publishButton.addEventListener("click", async () => {
   const withAudio = journey.checkpoints.filter((cp) => cp.audioBlob);
   if (withAudio.length === 0) {
@@ -821,13 +848,20 @@ publishButton.addEventListener("click", async () => {
   shareResult.classList.remove("visible");
 
   try {
-    const { url } = await MmryShare.publish(journey, (step, total, label) => {
+    const { url, visibility } = await MmryShare.publish(journey, (step, total, label) => {
       setPublishStatus(`${label}… (${step}/${total})`);
     });
 
     shareLinkInput.value = url;
     shareResult.classList.add("visible");
-    setPublishStatus("Ready to send. Anyone with this link can walk it.", "ok");
+
+    if (visibility === "private") {
+      setPublishStatus("Saved privately. Only you can open this link.", "ok");
+    } else if (MmryAuth.signedIn()) {
+      setPublishStatus("Ready to send. It's in My walks if you need it again.", "ok");
+    } else {
+      setPublishStatus("Ready to send. Anyone with this link can walk it.", "ok");
+    }
   } catch (err) {
     setPublishStatus(err.message, "warn");
   } finally {
@@ -1071,6 +1105,89 @@ toggleRecording = async function (checkpointId) {
 window.addEventListener("pagehide", stopPreview);
 
 // ---- Share bar -------------------------------------------------------------------
+
+// ---- Account, tags and visibility -------------------------------------------
+//
+// All optional. Everything below this line changes what happens to a walk once
+// it is published; none of it gates building one.
+
+function renderAccountBar() {
+  const who = el("account-who");
+  const action = el("account-action");
+  if (!who || !action) return;
+
+  const user = MmryAuth.user();
+  if (user) {
+    who.textContent = user.email || "Signed in";
+    action.textContent = "My walks";
+  } else {
+    who.textContent = "Not signed in";
+    action.textContent = "Sign in";
+  }
+
+  updateVisibilityControl();
+}
+
+function renderTagChips() {
+  const host = el("tag-chips");
+  if (!host) return;
+  host.innerHTML = "";
+
+  const chosen = journey.tags || [];
+
+  TAG_VOCABULARY.forEach((tag) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.textContent = tag;
+    chip.setAttribute("aria-pressed", String(chosen.includes(tag)));
+    chip.classList.toggle("on", chosen.includes(tag));
+
+    chip.addEventListener("click", () => {
+      const tags = journey.tags || [];
+      if (tags.includes(tag)) {
+        journey.tags = tags.filter((t) => t !== tag);
+      } else if (tags.length >= 5) {
+        // The database caps it at five; saying so beats a rejected publish.
+        setPublishStatus("Five tags is the limit.", "warn");
+        return;
+      } else {
+        journey.tags = [...tags, tag];
+      }
+      persist();
+      renderTagChips();
+    });
+
+    host.appendChild(chip);
+  });
+}
+
+function updateVisibilityControl() {
+  const select = el("visibility");
+  const note = el("visibility-note");
+  if (!select || !note) return;
+
+  const signedIn = MmryAuth.signedIn();
+
+  // A walk nobody owns cannot be private or public: there is no account to
+  // open it again, and nothing to list it under. The database refuses this
+  // too — the control just says so before the publish fails.
+  Array.from(select.options).forEach((option) => {
+    option.disabled = !signedIn && option.value !== "unlisted";
+  });
+
+  if (!signedIn) {
+    select.value = "unlisted";
+    journey.visibility = "unlisted";
+    note.textContent = "Sign in to keep a walk private or make it public.";
+  } else {
+    select.value = journey.visibility || "unlisted";
+    note.textContent =
+      select.value === "private"
+        ? "Only you can open it. Nobody you send the link to will get in."
+        : "";
+  }
+}
 
 function updateShareBar() {
   const total = journey.checkpoints.length;

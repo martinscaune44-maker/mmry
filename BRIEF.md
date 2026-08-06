@@ -81,6 +81,7 @@ That is the whole product. Everything else is authoring, sharing and polish.
 | `index.html` | Fixed demo with hardcoded zones |
 | `builder.html` | Build a journey: place checkpoints, record audio, publish |
 | `walk.html?j=<id>` | What a recipient opens — walking only, no editing |
+| `account.html` | Sign in, and the walks you have published |
 
 ### Recording
 
@@ -111,12 +112,24 @@ nodes.
 Mobile browsers also refuse to play audio not initiated by a user gesture, so
 the app opens on a "start" screen whose tap silently primes every clip.
 
-### Sharing
+### Sharing and accounts
 
 Publishing uploads the audio to Supabase storage and writes a row with an
-unguessable id. **The link is the credential** — there are no accounts yet, and
-nothing can edit a published journey, so republishing mints a new link. This
-buys link-sharing without an auth system, at the cost of orphaned rows.
+unguessable id. **The link is the credential** for anyone opening a walk, and
+always will be: it arrives from a friend who has no reason to sign up.
+
+Accounts sit on top of that and are optional — building, recording and
+publishing all work signed out. Signing in makes a walk yours, so it can be
+found again, retagged, hidden or deleted. Visibility has three states rather
+than two: private (only its owner), unlisted (anyone with the link — the
+default) and public (listed once discovery exists). A two-state toggle would
+have made every walk you *sent* unopenable.
+
+Access is decided by Postgres row-level security rather than by any check in
+the client, since anyone can call the REST endpoint directly. The read policy
+hides a private row instead of refusing it, so the existence of somebody's
+private walk never leaks — which means "private" and "deleted" are
+indistinguishable from outside, and the app says so rather than guessing.
 
 ### Known limits
 
@@ -142,9 +155,12 @@ with the phone pocketed and the screen off, which no browser can do.
 
 ## What is not built yet
 
-- Accounts and profiles
-- A public/private toggle per journey (decided, not implemented)
-- Tags and filters — musical, funny, atmospheric, morning, late night
+- Profiles — a display name others see. Nothing reads one until discovery
+  exists, so it cannot be designed properly yet
+- Editing a published walk's checkpoints. Visibility, tags and deletion are
+  owner-controlled; the audio and coordinates are still write-once
+- Sign in with Apple. Written, but it needs a Services ID and therefore the
+  paid Apple Developer Program
 - Searching for walks by area, deliberately sequenced last: an empty discovery
   map demos worse than none at all, and browsing is precisely the model that
   sank Detour
