@@ -1517,12 +1517,6 @@ body.builder .leaflet-top {
   text-decoration: underline;
 }
 
-/* ---- Tags and visibility in the share box ---------------------------------- */
-
-#share-meta {
-  padding: 10px 16px 0 16px;
-}
-
 .meta-label {
   display: block;
   font-size: 11px;
@@ -1872,5 +1866,292 @@ body.account {
 
   .alt-signin button {
     flex: 1;
+  }
+}
+
+/* ---- Publish sheet ----------------------------------------------------------
+   Tags and visibility matter for about ten seconds, at the end. Keeping them on
+   the building screen cost a third of the panel on a phone, so they live here
+   and the checkpoint list gets the room back. */
+
+#publish-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+#publish-sheet.hidden {
+  display: none;
+}
+
+#publish-panel {
+  width: 100%;
+  max-width: 460px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-bottom: none;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: var(--shadow-lg);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: sheet-up 0.28s var(--ease) both;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+#publish-close {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  font-size: 26px;
+  line-height: 1;
+  /* 44px is the smallest target a thumb hits reliably. */
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--r-sm);
+}
+
+#publish-close:hover {
+  color: var(--text);
+}
+
+.sheet-body {
+  padding: 16px 18px 4px 18px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#sheet-name {
+  width: 100%;
+  background: var(--surface-high);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  font-size: 16px; /* Below 16px, iOS zooms the page when the field is focused. */
+  margin-bottom: 18px;
+}
+
+#sheet-name:focus,
+#visibility:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.sheet-foot {
+  padding: 6px 18px 18px 18px;
+  border-top: 1px solid var(--line);
+}
+
+#publish-now {
+  width: 100%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 15px 20px;
+  font-size: 16px;
+  font-weight: 700;
+  transition: transform 0.15s var(--ease), opacity 0.2s var(--ease);
+}
+
+#publish-now:active {
+  transform: scale(0.985);
+}
+
+#publish-now:disabled {
+  opacity: 0.55;
+}
+
+#publish-sheet .meta-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+#publish-sheet #tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 18px;
+}
+
+#publish-sheet #visibility {
+  width: 100%;
+  background: var(--surface-high);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  font-size: 16px;
+}
+
+#publish-sheet #visibility-note {
+  margin: 8px 0 4px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-faint);
+  min-height: 16px;
+}
+
+/* ---- The emailed code -------------------------------------------------------
+   A code rather than a link: a link throws you out to a mail app and often
+   back into a different browser, which loses the session it was meant to give
+   you. */
+
+#code-panel h2 {
+  margin: 0 0 10px 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+#code-email {
+  color: var(--text);
+  /* break-all would split "gmail.com" across lines; this only breaks a word
+     that genuinely cannot fit. */
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+#code-form label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+#code {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  /* Wide tracking and tabular figures so six digits read as six digits. */
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 16px;
+}
+
+#code:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#verify-code {
+  width: 100%;
+}
+
+.code-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+#code-status {
+  margin: 16px 0 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  min-height: 18px;
+}
+
+#code-status.ok {
+  color: #7fd67f;
+}
+
+#code-status.warn {
+  color: var(--danger);
+}
+
+/* ---- Phone -------------------------------------------------------------------
+   Everything above is written mobile-first except where a desktop media query
+   overrides it. These are the fixes that only matter on a small screen. */
+
+@media (max-width: 899px) {
+  /* Never smaller than 16px in a field: iOS zooms the whole page in when you
+     focus anything smaller, and then you are panning a zoomed layout. */
+  #sign-in-form input,
+  .walk-controls select,
+  .walk-link input {
+    font-size: 16px;
+  }
+
+  #account-page {
+    padding: 18px 16px 48px 16px;
+  }
+
+  #account-page button {
+    min-height: 46px;
+  }
+
+  .form-actions button {
+    flex: 1;
+    min-width: 130px;
+  }
+
+  /* A walk's controls stack rather than squeezing a select and a button onto
+     one narrow line. */
+  .walk-controls {
+    flex-wrap: wrap;
+  }
+
+  .walk-controls select {
+    flex: 1 1 100%;
+  }
+
+  .walk-controls button {
+    flex: 1;
+  }
+
+  .walk-link button {
+    min-height: 42px;
+  }
+
+  #account-summary {
+    flex-wrap: wrap;
   }
 }

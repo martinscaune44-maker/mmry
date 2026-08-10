@@ -11,17 +11,44 @@ const el = (id) => document.getElementById(id);
 let walks = [];
 let activeTag = null;
 
+// Set while waiting on an emailed code: { email, type } where type is "signup"
+// for a new account and "email" for a sign-in code.
+let pendingCode = null;
+
 // ---- Panels -----------------------------------------------------------------
 
 function showPanels() {
   const signedIn = MmryAuth.signedIn();
-  el("sign-in-panel").hidden = signedIn;
   el("walks-panel").hidden = !signedIn;
+  el("code-panel").hidden = signedIn || !pendingCode;
+  el("sign-in-panel").hidden = signedIn || Boolean(pendingCode);
+
+  if (pendingCode && !signedIn) {
+    el("code-email").textContent = pendingCode.email;
+    el("code-title").textContent =
+      pendingCode.type === "signup" ? "Confirm your email" : "Check your email";
+    el("code").focus();
+  }
 
   if (signedIn) {
     const user = MmryAuth.user();
     el("signed-in-as").textContent = user && user.email ? user.email : "Signed in";
     loadWalks();
+  }
+}
+
+// Anything that talks to the network gets one of these. A button that looks
+// unchanged for two seconds reads as a button that did not work, and people
+// tap it again.
+async function withBusy(button, label, fn) {
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = label;
+  try {
+    return await fn();
+  } finally {
+    button.disabled = false;
+    button.textContent = original;
   }
 }
 
@@ -33,6 +60,12 @@ function setAuthStatus(message, tone = "") {
 
 function setWalksStatus(message, tone = "") {
   const status = el("walks-status");
+  status.textContent = message;
+  status.className = tone;
+}
+
+function setCodeStatus(message, tone = "") {
+  const status = el("code-status");
   status.textContent = message;
   status.className = tone;
 }
@@ -49,14 +82,21 @@ el("sign-in-form").addEventListener("submit", async (event) => {
     return;
   }
 
-  setAuthStatus("Signing in…");
-  try {
-    await MmryAuth.signIn(email, password);
-    setAuthStatus("");
-    showPanels();
-  } catch (err) {
-    setAuthStatus(err.message, "warn");
-  }
+  setAuthStatus("");
+  await withBusy(el("sign-in"), "Signing in…", async () => {
+    try {
+      await MmryAuth.signIn(email, password);
+      showPanels();
+    } catch (err) {
+      // An unconfirmed account is not a failure, it is an unfinished signup —
+      // send the code rather than making them work out what to do.
+      if (/confirmation link|inbox/i.test(err.message)) {
+        await startCodeFlow(email, "signup", () => MmryAuth.resendCode(email, "signup"));
+        return;
+      }
+      setAuthStatus(err.message, "warn");
+    }
+  });
 });
 
 el("sign-up").addEventListener("click", async () => {
@@ -67,40 +107,100 @@ el("sign-up").addEventListener("click", async () => {
     return;
   }
 
-  setAuthStatus("Creating your account…");
-  try {
-    const { confirmationRequired } = await MmryAuth.signUp(email, password);
-    if (confirmationRequired) {
-      // This project has email confirmation switched on, so signing up hands
-      // back a user but no session. Saying "check your inbox" is the whole
-      // difference between working and appearing broken.
-      setAuthStatus(
-        `Check ${email} for a confirmation link, then come back and sign in.`,
-        "ok"
-      );
-      return;
+  setAuthStatus("");
+  await withBusy(el("sign-up"), "Creating…", async () => {
+    try {
+      const { codeRequired } = await MmryAuth.signUp(email, password);
+      if (!codeRequired) {
+        showPanels();
+        return;
+      }
+      pendingCode = { email, type: "signup" };
+      showPanels();
+      setCodeStatus("");
+    } catch (err) {
+      setAuthStatus(err.message, "warn");
     }
-    setAuthStatus("");
-    showPanels();
-  } catch (err) {
-    setAuthStatus(err.message, "warn");
-  }
+  });
 });
 
-el("magic-link").addEventListener("click", async () => {
+el("email-code").addEventListener("click", async () => {
   const email = el("email").value.trim();
   if (!email) {
     setAuthStatus("Enter your email first.", "warn");
     return;
   }
 
-  setAuthStatus("Sending…");
+  setAuthStatus("");
+  await withBusy(el("email-code"), "Sending…", () =>
+    startCodeFlow(email, "email", () => MmryAuth.sendSignInCode(email))
+  );
+});
+
+async function startCodeFlow(email, type, send) {
   try {
-    await MmryAuth.signInWithMagicLink(email);
-    setAuthStatus(`Sent. Open the link in ${email} on the device you want to use.`, "ok");
+    await send();
+    pendingCode = { email, type };
+    showPanels();
+    setCodeStatus("");
   } catch (err) {
     setAuthStatus(err.message, "warn");
   }
+}
+
+// ---- The code screen ---------------------------------------------------------
+
+el("code-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!pendingCode) return;
+
+  const code = el("code").value.replace(/\D/g, "");
+  if (code.length !== 6) {
+    setCodeStatus("Enter the six digits from the email.", "warn");
+    return;
+  }
+
+  setCodeStatus("");
+  await withBusy(el("verify-code"), "Checking…", async () => {
+    try {
+      await MmryAuth.verifyCode(pendingCode.email, code, pendingCode.type);
+      pendingCode = null;
+      showPanels();
+    } catch (err) {
+      setCodeStatus(err.message, "warn");
+    }
+  });
+});
+
+// Six digits is the whole form, so waiting for a separate tap is pointless —
+// and on a phone the keyboard is covering the button anyway.
+el("code").addEventListener("input", () => {
+  const digits = el("code").value.replace(/\D/g, "");
+  if (digits !== el("code").value) el("code").value = digits;
+  if (digits.length === 6) el("code-form").requestSubmit();
+});
+
+el("resend-code").addEventListener("click", async () => {
+  if (!pendingCode) return;
+  await withBusy(el("resend-code"), "Sending…", async () => {
+    try {
+      if (pendingCode.type === "signup") {
+        await MmryAuth.resendCode(pendingCode.email, "signup");
+      } else {
+        await MmryAuth.sendSignInCode(pendingCode.email);
+      }
+      setCodeStatus("Sent. It can take a minute to arrive.", "ok");
+    } catch (err) {
+      setCodeStatus(err.message, "warn");
+    }
+  });
+});
+
+el("code-back").addEventListener("click", () => {
+  pendingCode = null;
+  el("code").value = "";
+  setCodeStatus("");
+  showPanels();
 });
 
 el("google").addEventListener("click", () => {

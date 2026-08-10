@@ -33,6 +33,7 @@
     <form id="sign-in-form" autocomplete="on">
       <label for="email">Email</label>
       <input id="email" type="email" autocomplete="email" required
+             inputmode="email" autocapitalize="off" spellcheck="false"
              placeholder="you@example.com" />
 
       <label for="password">Password</label>
@@ -48,11 +49,36 @@
     <p class="or">or</p>
 
     <div class="alt-signin">
-      <button id="magic-link" class="secondary" type="button">Email me a link instead</button>
+      <button id="email-code" class="secondary" type="button">Email me a code instead</button>
       <button id="google" class="secondary" type="button">Continue with Google</button>
     </div>
 
     <p id="auth-status"></p>
+  </section>
+
+  <!-- Waiting for the emailed code -->
+  <section id="code-panel" hidden>
+    <h2 id="code-title">Check your email</h2>
+    <p class="lede">
+      We sent a six-digit code to <strong id="code-email"></strong>. Type it
+      below — no link to tap, and no leaving this page.
+    </p>
+
+    <form id="code-form">
+      <label for="code">Code</label>
+      <!-- one-time-code lets iOS and Android offer it straight from the
+           notification, which is the whole point of using a code. -->
+      <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code"
+             pattern="[0-9]*" maxlength="6" placeholder="123456" />
+      <button id="verify-code" type="submit">Confirm</button>
+    </form>
+
+    <div class="code-actions">
+      <button id="resend-code" class="linky" type="button">Send another code</button>
+      <button id="code-back" class="linky" type="button">Use a different email</button>
+    </div>
+
+    <p id="code-status"></p>
   </section>
 
   <!-- Signed in -->

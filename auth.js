@@ -136,30 +136,52 @@ const MmryAuth = {
     if (/rate limit|too many/i.test(raw)) {
       return "Too many attempts. Wait a minute and try again.";
     }
+    if (/token has expired or is invalid/i.test(raw)) {
+      return "That code is wrong or has expired. Codes last an hour — tap resend for a new one.";
+    }
+    if (/otp_disabled|signups not allowed/i.test(raw)) {
+      return "Email sign-up is switched off for this project.";
+    }
     if (status === 0 || !raw) return "Couldn't reach the server. Check your connection.";
     return raw;
   },
 
   // ---- Ways in -------------------------------------------------------------
 
-  // redirect_to is a query parameter on GoTrue's REST API, not a body field —
-  // the "options.emailRedirectTo" shape belongs to the JS SDK, and passing it
-  // in the body is accepted and then quietly ignored, sending people to the
-  // project's default Site URL instead.
+  // Confirmation is by six-digit code, not by a link to tap. A link forces you
+  // out of the app into a mail client and back, and on a phone it often opens
+  // in a different browser than the one you started in — which loses the
+  // session you were about to get. A code is typed where you already are, and
+  // iOS offers it from the notification.
+  //
+  // redirect_to is still sent for the Google flow, and is a query parameter on
+  // GoTrue's REST API rather than a body field — the "options.emailRedirectTo"
+  // shape belongs to the JS SDK, and in the body it is accepted and quietly
+  // ignored.
   async signUp(email, password) {
-    const redirect = encodeURIComponent(this.redirectTarget());
-    const payload = await this._post(`signup?redirect_to=${redirect}`, {
-      email,
-      password,
-    });
+    const payload = await this._post("signup", { email, password });
 
-    // With email confirmation switched on, signup returns a user but no
-    // session — there is nothing to store yet and the caller has to say so.
+    // With email confirmation on, signup returns a user but no session. The
+    // caller has to collect the code before there is anything to store.
     if (!payload || !payload.access_token) {
-      return { confirmationRequired: true, email };
+      return { codeRequired: true, email };
     }
     this._store(payload);
-    return { confirmationRequired: false };
+    return { codeRequired: false };
+  },
+
+  // type: "signup" for confirming a new account, "email" for a sign-in code.
+  async verifyCode(email, token, type = "email") {
+    const payload = await this._post("verify", {
+      type,
+      email,
+      token: String(token).replace(/\D/g, ""),
+    });
+    return this._store(payload);
+  },
+
+  async resendCode(email, type = "signup") {
+    await this._post("resend", { type, email });
   },
 
   async signIn(email, password) {
@@ -167,11 +189,11 @@ const MmryAuth = {
     return this._store(payload);
   },
 
-  // No password anywhere: Supabase emails a link, tapping it lands back on the
-  // page with tokens in the fragment. The least painful way in on a phone.
-  async signInWithMagicLink(email) {
-    const redirect = encodeURIComponent(this.redirectTarget());
-    await this._post(`otp?redirect_to=${redirect}`, { email, create_user: true });
+  // No password anywhere: Supabase emails a six-digit code, you type it in.
+  // Creates the account if there isn't one, so it doubles as a way in for
+  // somebody who never wants to pick a password.
+  async sendSignInCode(email) {
+    await this._post("otp", { email, create_user: true });
   },
 
   // OAuth is a full page redirect rather than a fetch — the provider needs to

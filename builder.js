@@ -837,14 +837,56 @@ el("visibility").addEventListener("change", () => {
 MmryAuth.onChange(renderAccountBar);
 window.addEventListener("pageshow", renderAccountBar);
 
-publishButton.addEventListener("click", async () => {
+// ---- The publish sheet ------------------------------------------------------
+
+const publishSheet = el("publish-sheet");
+const publishNow = el("publish-now");
+
+function openPublishSheet() {
+  el("sheet-name").value = journey.name || "";
+  setPublishStatus("");
+  shareResult.classList.remove("visible");
+  renderTagChips();
+  updateVisibilityControl();
+  publishSheet.classList.remove("hidden");
+  publishNow.disabled = false;
+  publishNow.textContent = "Publish";
+}
+
+function closePublishSheet() {
+  publishSheet.classList.add("hidden");
+}
+
+publishButton.addEventListener("click", openPublishSheet);
+el("publish-close").addEventListener("click", closePublishSheet);
+
+// Tapping the dimmed area behind the sheet closes it, which is what every
+// bottom sheet on a phone does.
+publishSheet.addEventListener("click", (event) => {
+  if (event.target === publishSheet) closePublishSheet();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !publishSheet.classList.contains("hidden")) {
+    closePublishSheet();
+  }
+});
+
+// One name, two inputs — the top bar and the sheet — so they have to agree.
+el("sheet-name").addEventListener("input", () => {
+  journey.name = el("sheet-name").value;
+  el("journey-name").value = journey.name;
+  persist();
+});
+
+publishNow.addEventListener("click", async () => {
   const withAudio = journey.checkpoints.filter((cp) => cp.audioBlob);
   if (withAudio.length === 0) {
     setPublishStatus("Attach audio to at least one checkpoint first.", "warn");
     return;
   }
 
-  publishButton.disabled = true;
+  publishNow.disabled = true;
   shareResult.classList.remove("visible");
 
   try {
@@ -865,7 +907,12 @@ publishButton.addEventListener("click", async () => {
   } catch (err) {
     setPublishStatus(err.message, "warn");
   } finally {
-    publishButton.disabled = false;
+    publishNow.disabled = false;
+    // Publishing again would mint a second link to the same walk, so the
+    // button becomes the way to correct a mistake rather than the default.
+    publishNow.textContent = shareResult.classList.contains("visible")
+      ? "Publish again"
+      : "Publish";
   }
 });
 
