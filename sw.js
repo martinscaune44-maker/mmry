@@ -11,14 +11,11 @@
 // Bump VERSION to retire old caches.
 // ---------------------------------------------------------------------------
 
-const VERSION = "v26";
+const VERSION = "v27";
 const SHELL_CACHE = `mmry-shell-${VERSION}`;
 const MEDIA_CACHE = `mmry-media-${VERSION}`;
 const TILE_CACHE = "mmry-tiles";
-// Room for the low-zoom world set (341 tiles for levels 0–4, which is what
-// shows when somebody zooms all the way out) plus a working set around
-// wherever they actually are. At 400 the world would evict the neighbourhood.
-const TILE_LIMIT = 900;
+const TILE_LIMIT = 500;
 
 const SHELL_ASSETS = [
   "./",

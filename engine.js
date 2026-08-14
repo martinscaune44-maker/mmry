@@ -217,20 +217,18 @@ const MmryTiles = {
     );
   },
 
-  // Requesting the whole world at zoom+1 would be thousands of tiles, so this
-  // is capped and the neighbouring levels are done cheapest-first.
-  //
-  // Two levels out rather than one: zooming out is where blank squares are most
-  // obvious, because each step needs a quarter as many tiles over four times
-  // the area, and none of them are the ones already loaded. Zooming out is also
-  // cheap to cover — z-2 over the same view is a sixteenth of the tiles of z+1.
-  prefetch(map, template, { subdomains = "abcd", limit = 140 } = {}) {
+  // Prefetching competes with the tiles actually on screen, and past a point it
+  // makes the map slower rather than smoother: the browser opens a handful of
+  // connections per host, and speculative tiles sitting in them delay the ones
+  // somebody is waiting to see. So this stays small, runs at low priority, and
+  // covers one level either side rather than trying to cover every move.
+  prefetch(map, template, { subdomains = "abcd", limit = 60 } = {}) {
     const bounds = map.getBounds();
     const zoom = Math.round(map.getZoom());
     const retina = window.devicePixelRatio > 1 ? "@2x" : "";
     let requested = 0;
 
-    [zoom - 1, zoom - 2, zoom + 1].forEach((z) => {
+    [zoom - 1, zoom + 1].forEach((z) => {
       if (z < 0 || z > 20 || requested >= limit) return;
 
       const x1 = this.xFor(bounds.getWest(), z);
@@ -248,39 +246,17 @@ const MmryTiles = {
             .replace("{r}", retina);
 
           // An Image is enough: the response lands in the HTTP and service
-          // worker caches, which is all Leaflet needs later.
+          // worker caches, which is all Leaflet needs later. Low priority so
+          // the browser puts real tiles first — without this, speculative
+          // fetches occupy the connection pool and the map gets slower.
           const img = new Image();
+          img.fetchPriority = "low";
+          img.decoding = "async";
           img.src = url;
           requested += 1;
         }
       }
     });
-  },
-
-  // The whole world at low zoom is small enough to just fetch: levels 0 to 4
-  // are 341 tiles total, and they are what shows when somebody zooms all the
-  // way out. Done once, after the map has settled, so it never competes with
-  // tiles that are actually on screen.
-  prefetchWorld(template, { subdomains = "abcd", maxZoom = 4 } = {}) {
-    if (this._worldDone) return;
-    this._worldDone = true;
-
-    let n = 0;
-    for (let z = 0; z <= maxZoom; z++) {
-      const span = Math.pow(2, z);
-      for (let x = 0; x < span; x++) {
-        for (let y = 0; y < span; y++) {
-          const img = new Image();
-          img.src = template
-            .replace("{s}", subdomains[n % subdomains.length])
-            .replace("{z}", z)
-            .replace("{x}", x)
-            .replace("{y}", y)
-            .replace("{r}", "");
-          n += 1;
-        }
-      }
-    }
   },
 
   // Runs after the map stops moving, so it never competes with tiles actually
@@ -289,13 +265,11 @@ const MmryTiles = {
     let timer = null;
     const schedule = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => this.prefetch(map, template, options), 400);
+      // Long enough that the tiles for where you actually are have been
+      // requested and are on their way before anything speculative starts.
+      timer = setTimeout(() => this.prefetch(map, template, options), 900);
     };
     map.on("moveend zoomend", schedule);
     schedule();
-
-    // Idle time, well after the first paint — this is insurance against a blank
-    // world, not something the first view depends on.
-    setTimeout(() => this.prefetchWorld(template, options), 3000);
   },
 };
