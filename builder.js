@@ -28,7 +28,31 @@ let insideState = {}; // checkpoint id -> bool
 
 // ---- Map --------------------------------------------------------------------
 
-const map = L.map("map").setView([57.0810, 24.3198], 15);
+// Zoom sits bottom-right, beside the locate button, the way every serious
+// map app groups its controls — within reach of the hand already on the
+// mouse, and clear of the panel on the left.
+const map = L.map("map", { zoomControl: false }).setView([57.0810, 24.3198], 15);
+
+// Locate sits above zoom, and both are handed to Leaflet rather than pinned
+// with CSS offsets. Leaflet stacks whatever is in a corner in the order it was
+// added, so the two stay aligned even though the attribution shares the corner
+// and changes height when it wraps.
+const LocateControl = L.Control.extend({
+  onAdd() {
+    const button = document.getElementById("locate-me");
+    // Otherwise a click on the button also reaches the map, which in build
+    // mode drops a checkpoint under it.
+    L.DomEvent.disableClickPropagation(button);
+    return button;
+  },
+  onRemove() {},
+});
+
+// Zoom first, locate second. Leaflet inserts into a bottom corner in reverse —
+// each new control goes above the last — so this is the order that puts locate
+// on top, matching where Google Maps keeps it.
+L.control.zoom({ position: "bottomright" }).addTo(map);
+new LocateControl({ position: "bottomright" }).addTo(map);
 
 // Light basemap. A dark map under dark chrome reads as one black smear and the
 // checkpoint circles vanish into it; every serious map app — Strava, Komoot,
@@ -596,6 +620,9 @@ function setMode(next) {
   el("mode-build").classList.toggle("active", next === "build");
   el("mode-walk").classList.toggle("active", next === "walk");
   el("build-panel").classList.toggle("hidden", next !== "build");
+  // The map controls sit above the panel on a phone, so they need to know when
+  // the panel is gone — in walk mode the map has the whole screen.
+  document.body.classList.toggle("panel-hidden", next !== "build");
 
   if (next === "build") {
     stopWalking();
@@ -1172,7 +1199,25 @@ function renderAccountBar() {
     action.textContent = "Sign in";
   }
 
+  renderProfileChip(user);
   updateVisibilityControl();
+}
+
+// The account control on desktop: an initial when signed in, a drawn figure
+// when not, so the state is readable without a label taking up map.
+function renderProfileChip(user) {
+  const chip = el("profile-chip");
+  const initial = el("profile-initial");
+  if (!chip || !initial) return;
+
+  const signedIn = Boolean(user);
+  chip.classList.toggle("signed-in", signedIn);
+  initial.textContent = signedIn ? (user.email || "?").trim().charAt(0) : "";
+  chip.setAttribute(
+    "aria-label",
+    signedIn ? `Account — ${user.email || "signed in"}` : "Sign in"
+  );
+  chip.title = signedIn ? user.email || "My walks" : "Sign in";
 }
 
 function renderTagChips() {
@@ -1430,15 +1475,10 @@ el("panel-toggle").addEventListener("click", () => {
   el("panel-toggle").setAttribute("aria-expanded", String(!collapsed));
   el("panel-toggle").setAttribute("aria-label", collapsed ? "Show panel" : "Hide panel");
 
-  // Leaflet only recalculates its size when told. Telling it once at the end
-  // left the map rendered at the old width for the whole animation and then
-  // snapping into place, so tell it on every frame while the panel moves.
-  const started = performance.now();
-  const follow = () => {
-    map.invalidateSize({ animate: false, pan: false });
-    if (performance.now() - started < 320) requestAnimationFrame(follow);
-  };
-  requestAnimationFrame(follow);
+  // Nothing to tell Leaflet any more. The panel floats over a full-bleed map
+  // rather than shrinking it, so opening it no longer resizes anything — which
+  // is why the map now stays exactly where you left it, instead of the world
+  // sliding as the panel moved.
 });
 
 // Jump to a fraction of the clip. Starts it playing if it was not already, so a

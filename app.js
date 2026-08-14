@@ -12,7 +12,12 @@ const locationHelp = document.getElementById("location-help");
 
 // ---- Map setup -------------------------------------------------------------
 
-const map = L.map("map").setView([MAP_CENTER.lat, MAP_CENTER.lng], MAP_ZOOM);
+// Zoom sits bottom-right, beside the locate button, the way every serious
+// map app groups its controls — within reach of the hand already on the
+// mouse, and clear of the panel on the left.
+const map = L.map("map", { zoomControl: false }).setView([MAP_CENTER.lat, MAP_CENTER.lng], MAP_ZOOM);
+
+L.control.zoom({ position: "bottomright" }).addTo(map);
 
 // Light basemap. A dark map under dark chrome reads as one black smear and the
 // checkpoint circles vanish into it; every serious map app — Strava, Komoot,

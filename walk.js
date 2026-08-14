@@ -18,7 +18,12 @@ const blurbEl = document.getElementById("journey-blurb");
 const statusBar = document.getElementById("status-bar");
 statusBar.classList.add("pre-walk");
 
-const map = L.map("map").setView([57.081058, 24.319797], 15);
+// Zoom sits bottom-right, beside the locate button, the way every serious
+// map app groups its controls — within reach of the hand already on the
+// mouse, and clear of the panel on the left.
+const map = L.map("map", { zoomControl: false }).setView([57.081058, 24.319797], 15);
+
+L.control.zoom({ position: "bottomright" }).addTo(map);
 
 // Light basemap. A dark map under dark chrome reads as one black smear and the
 // checkpoint circles vanish into it; every serious map app — Strava, Komoot,

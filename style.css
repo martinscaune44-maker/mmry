@@ -618,9 +618,136 @@ button.linky {
   text-underline-offset: 3px;
 }
 
-/* Keep Leaflet's zoom buttons clear of the builder's top bar. */
-body.builder .leaflet-top {
-  top: 62px;
+/* ---- Map controls, bottom right --------------------------------------------
+   Zoom and locate as one stack in the corner, the way Google Maps, Apple Maps
+   and Strava all group them. */
+
+.leaflet-bottom.leaflet-right {
+  /* Clear of the attribution strip along the bottom edge. */
+  bottom: 22px;
+  right: 14px;
+}
+
+/* On a phone the builder's sheet owns the bottom of the screen, so a corner
+   stack there would be underneath it. Lift the whole stack clear of the sheet
+   rather than moving the buttons somewhere else — one arrangement to learn,
+   whichever device you are on. */
+@media (max-width: 899px) {
+  body.builder .leaflet-bottom.leaflet-right {
+    bottom: calc(58vh + 14px);
+    transition: bottom 0.3s var(--ease);
+  }
+
+  body.builder.panel-collapsed .leaflet-bottom.leaflet-right,
+  body.builder.panel-hidden .leaflet-bottom.leaflet-right {
+    bottom: 22px;
+  }
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: var(--shadow-md) !important;
+  border-radius: var(--r-md) !important;
+  overflow: hidden;
+  /* Leaflet gives every control a 10px margin of its own, which would push
+     this out of line with the locate button positioned against the edge. */
+  margin: 0 !important;
+}
+
+.leaflet-control-zoom a {
+  width: 42px !important;
+  height: 42px !important;
+  line-height: 42px !important;
+  font-size: 20px !important;
+  background: rgba(23, 24, 26, 0.94) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  transition: background 0.15s var(--ease);
+}
+
+.leaflet-control-zoom a:first-child {
+  border-bottom: 1px solid var(--line) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--surface-high) !important;
+}
+
+.leaflet-control-zoom a.leaflet-disabled {
+  opacity: 0.4;
+}
+
+/* ---- Account chip ------------------------------------------------------------
+   Top right, the corner every map app reserves for it. Hidden on phones, where
+   the top bar owns that corner and the panel carries its own account row. */
+
+#profile-chip {
+  display: none;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1300;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(23, 24, 26, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.15s var(--ease), border-color 0.2s var(--ease);
+}
+
+#profile-chip:hover {
+  border-color: var(--line-strong);
+  transform: scale(1.05);
+}
+
+#profile-initial {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Signed in: the initial in the accent colour, so the state reads at a glance
+   without a label. */
+#profile-chip.signed-in {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+#profile-chip.signed-in #profile-initial {
+  color: var(--accent-ink);
+}
+
+/* Signed out: a drawn head-and-shoulders rather than a letter. */
+#profile-chip:not(.signed-in) #profile-initial {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--text-dim);
+  position: relative;
+  margin-top: -3px;
+}
+
+#profile-chip:not(.signed-in) #profile-initial::after {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 15px;
+  width: 22px;
+  height: 11px;
+  border-radius: 11px 11px 0 0;
+  border: 2px solid var(--text-dim);
+  border-bottom: none;
 }
 
 /* ---- Signal warning ------------------------------------------------------- */
@@ -1092,7 +1219,7 @@ body.builder .leaflet-top {
     left: 0;
     right: auto;
     width: var(--panel-w);
-    transition: transform 0.25s var(--ease);
+    transition: transform 0.3s var(--ease);
   }
 
   body.builder #top-bar {
@@ -1119,19 +1246,16 @@ body.builder .leaflet-top {
     display: none;
   }
 
-  body.builder #map,
+  /* The map stays full-bleed and the panel floats over it, the way Google
+     Maps does. Resizing the map instead re-lays out every tile and shifts what
+     you were looking at, so opening the panel used to move the world. */
   body.builder #status-bar {
     left: var(--panel-w);
-    transition: left 0.25s var(--ease);
+    transition: left 0.3s var(--ease);
   }
 
   body.builder #status-bar {
     top: 0;
-  }
-
-  /* Clear of the collapse button, which sits at the map's top-left corner. */
-  body.builder .leaflet-top {
-    top: 58px;
   }
 
   /* Collapsed: the panel slides out and the map takes the whole window. */
@@ -1140,7 +1264,6 @@ body.builder .leaflet-top {
     transform: translateX(-100%);
   }
 
-  body.builder.panel-collapsed #map,
   body.builder.panel-collapsed #status-bar {
     left: 0;
   }
@@ -1203,11 +1326,11 @@ body.builder .leaflet-top {
   transition: transform 0.25s var(--ease);
 }
 
+/* Positioned by Leaflet as a control in the bottom-right stack, not pinned
+   with offsets of its own. */
 #locate-me {
-  position: absolute;
-  right: 14px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
-  z-index: 1000;
+  position: relative;
+  margin: 0 0 10px 0 !important;
   width: 42px;
   height: 42px;
   border-radius: 50%;
@@ -1252,8 +1375,14 @@ body.builder .leaflet-top {
 }
 
 @media (min-width: 900px) {
-  body.builder #locate-me {
-    bottom: 28px;
+  body.builder #profile-chip {
+    display: flex;
+  }
+
+  /* The panel already carries the account row on a phone; with the chip up
+     there it would be saying the same thing twice. */
+  body.builder #account-bar {
+    display: none;
   }
 }
 
