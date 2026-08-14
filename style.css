@@ -27,6 +27,7 @@
   --r-pill: 999px;
 
   --panel-w: 380px;
+  --rail-w: 68px;
 
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 -8px 32px rgba(0, 0, 0, 0.5);
@@ -1213,10 +1214,14 @@ button.linky {
    --------------------------------------------------------------------------- */
 
 @media (min-width: 900px) {
+  body.builder #rail {
+    display: flex;
+  }
+
   body.builder #top-bar,
   body.builder #build-panel {
-    /* Left, leaving the right free for profiles and browsing later. */
-    left: 0;
+    /* Right of the rail, leaving the far right free for the account chip. */
+    left: var(--rail-w);
     right: auto;
     width: var(--panel-w);
     transition: transform 0.3s var(--ease);
@@ -1250,7 +1255,7 @@ button.linky {
      Maps does. Resizing the map instead re-lays out every tile and shifts what
      you were looking at, so opening the panel used to move the world. */
   body.builder #status-bar {
-    left: var(--panel-w);
+    left: calc(var(--rail-w) + var(--panel-w));
     transition: left 0.3s var(--ease);
   }
 
@@ -1261,20 +1266,21 @@ button.linky {
   /* Collapsed: the panel slides out and the map takes the whole window. */
   body.builder.panel-collapsed #top-bar,
   body.builder.panel-collapsed #build-panel {
-    transform: translateX(-100%);
+    transform: translateX(calc(-100% - var(--rail-w)));
   }
 
+  /* Collapsed still leaves the rail, so the map starts after it. */
   body.builder.panel-collapsed #status-bar {
-    left: 0;
+    left: var(--rail-w);
   }
 
   body.builder #panel-toggle {
     display: flex;
-    left: calc(var(--panel-w) + 14px);
+    left: calc(var(--rail-w) + var(--panel-w) + 14px);
   }
 
   body.builder.panel-collapsed #panel-toggle {
-    left: 14px;
+    left: calc(var(--rail-w) + 14px);
   }
 
   body.builder.panel-collapsed #panel-toggle span {
@@ -2285,4 +2291,450 @@ body.account {
   #account-summary {
     flex-wrap: wrap;
   }
+}
+
+/* ---- The rail ---------------------------------------------------------------
+   Always there on desktop, even with the panel closed, so there is always a way
+   back to anything. Hidden on phones, where a permanent 68px column would be a
+   sixth of the screen. */
+
+#rail {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1250;
+  width: var(--rail-w);
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 0;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+}
+
+.rail-item {
+  width: 60px;
+  padding: 9px 0 7px 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-md);
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.rail-item:hover {
+  color: var(--text-dim);
+  background: var(--surface);
+}
+
+.rail-item.active {
+  color: var(--accent);
+}
+
+.rail-icon {
+  width: 20px;
+  height: 20px;
+  position: relative;
+}
+
+/* Icons drawn in CSS. Four small shapes are not worth four requests, and they
+   inherit currentColor so the active state needs no second asset. */
+.icon-build::before {
+  content: "";
+  position: absolute;
+  inset: 2px 4px 6px 4px;
+  border: 2px solid currentColor;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+}
+
+.icon-build::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 1px;
+  width: 2px;
+  height: 6px;
+  margin-left: -1px;
+  background: currentColor;
+}
+
+.icon-saved::before {
+  content: "";
+  position: absolute;
+  inset: 2px 4px;
+  border: 2px solid currentColor;
+  border-bottom: none;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 68%, 0 100%);
+}
+
+.icon-recents::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.icon-recents::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 2px;
+  height: 6px;
+  background: currentColor;
+  transform-origin: bottom center;
+  transform: rotate(35deg);
+}
+
+.icon-mine::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.icon-mine::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  bottom: 1px;
+  width: 18px;
+  height: 8px;
+  border: 2px solid currentColor;
+  border-bottom: none;
+  border-radius: 9px 9px 0 0;
+}
+
+/* ---- Saved / Recents panel -------------------------------------------------- */
+
+#library-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--rail-w);
+  width: var(--panel-w);
+  z-index: 1150;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+  padding: 20px 18px;
+  overflow-y: auto;
+}
+
+#library-panel.hidden {
+  display: none;
+}
+
+#library-panel h2 {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+#library-note {
+  margin: 0 0 18px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+#library-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#library-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+#library-list .empty {
+  display: block;
+  border: none;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+.library-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-name:hover {
+  color: var(--accent);
+}
+
+.library-meta {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.library-remove {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+}
+
+.library-remove:hover {
+  color: var(--danger);
+  background: rgba(255, 92, 92, 0.1);
+}
+
+/* ---- Profile menu ------------------------------------------------------------ */
+
+#profile-menu {
+  position: absolute;
+  top: 64px;
+  right: 14px;
+  z-index: 1400;
+  width: 250px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  animation: menu-drop 0.16s var(--ease) both;
+}
+
+#profile-menu.hidden {
+  display: none;
+}
+
+@keyframes menu-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+#menu-identity {
+  padding: 10px 12px 12px 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 6px;
+}
+
+#menu-email {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  transition: color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.menu-item:hover {
+  color: var(--text);
+  background: var(--surface-high);
+}
+
+.menu-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 6px 12px;
+}
+
+.menu-switch {
+  cursor: pointer;
+}
+
+.menu-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch {
+  flex-shrink: 0;
+  width: 34px;
+  height: 20px;
+  border-radius: var(--r-pill);
+  background: var(--surface-high);
+  border: 1px solid var(--line-strong);
+  position: relative;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  transition: transform 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.menu-switch input:checked + .switch {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.menu-switch input:checked + .switch::after {
+  background: var(--accent-ink);
+  transform: translateX(14px);
+}
+
+/* ---- Hide-my-location toggle --------------------------------------------------
+   Deliberately smaller than the locate button beside it: this changes what the
+   map shows, the other changes where it looks. */
+
+#toggle-me {
+  position: relative;
+  margin: 0 0 10px 0 !important;
+  width: 30px;
+  height: 30px;
+  align-self: flex-end;
+  border-radius: 50%;
+  background: rgba(23, 24, 26, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto !important;
+}
+
+#toggle-me span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--zone);
+  border: 2px solid #fff;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+#toggle-me.off span {
+  background: transparent;
+  border-color: var(--text-faint);
+}
+
+/* A strike-through, so "off" reads as off rather than as a different colour. */
+#toggle-me.off::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 2px;
+  background: var(--text-faint);
+  transform: rotate(-45deg);
+  border-radius: 1px;
+}
+
+/* ---- Coordinates in the checkpoint popup -------------------------------------- */
+
+.cp-popup-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 14px;
+}
+
+.cp-popup-coords {
+  display: block;
+  width: 100%;
+  margin-top: 9px;
+  padding: 5px 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+
+.cp-popup-coords:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.cp-popup-open {
+  display: block;
+  margin-top: 7px;
+  color: var(--accent) !important;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cp-popup-open:hover {
+  text-decoration: underline;
+}
+
+/* ---- Save button on a shared walk ---------------------------------------------- */
+
+#save-walk {
+  display: block;
+  width: fit-content;
+  margin: 14px auto 0 auto;
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  font-size: 14px;
+}
+
+#save-walk:hover {
+  color: var(--text-dim);
+}
+
+#save-walk.on {
+  color: var(--accent);
 }

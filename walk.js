@@ -107,6 +107,25 @@ async function boot() {
   );
 
   startButton.disabled = false;
+
+  // Remembering a walk is a property of this device, not of an account: the
+  // link arrived from a friend, and needing to sign up before it could be kept
+  // would defeat the point of the link.
+  const entry = { id: journey.id, name: journey.name, count };
+  MmryLibrary.recordVisit(entry);
+
+  const saveButton = document.getElementById("save-walk");
+  const paintSaveButton = () => {
+    const saved = MmryLibrary.isSaved(journey.id);
+    saveButton.textContent = saved ? "★ Saved" : "☆ Save this walk";
+    saveButton.classList.toggle("on", saved);
+  };
+  saveButton.hidden = false;
+  paintSaveButton();
+  saveButton.addEventListener("click", () => {
+    MmryLibrary.toggleSave(entry);
+    paintSaveButton();
+  });
 }
 
 // ---- Wake lock ---------------------------------------------------------------

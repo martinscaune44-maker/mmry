@@ -20,6 +20,28 @@
 
 <div id="map"></div>
 
+<!-- The rail. Always visible on desktop, even with the panel closed, so there
+     is always a way back to anything. Icons are drawn in CSS rather than
+     shipped as files — five small shapes are not worth a request each. -->
+<nav id="rail" aria-label="Sections">
+  <button class="rail-item active" type="button" data-view="build" aria-label="Build">
+    <span class="rail-icon icon-build" aria-hidden="true"></span>
+    <span class="rail-label">Build</span>
+  </button>
+  <button class="rail-item" type="button" data-view="saved" aria-label="Saved walks">
+    <span class="rail-icon icon-saved" aria-hidden="true"></span>
+    <span class="rail-label">Saved</span>
+  </button>
+  <button class="rail-item" type="button" data-view="recents" aria-label="Recently opened">
+    <span class="rail-icon icon-recents" aria-hidden="true"></span>
+    <span class="rail-label">Recents</span>
+  </button>
+  <a class="rail-item" href="account.html" aria-label="My walks">
+    <span class="rail-icon icon-mine" aria-hidden="true"></span>
+    <span class="rail-label">Mine</span>
+  </a>
+</nav>
+
 <button id="panel-toggle" type="button" aria-label="Hide panel" aria-expanded="true">
   <span aria-hidden="true"></span>
 </button>
@@ -28,12 +50,38 @@
   <span aria-hidden="true"></span>
 </button>
 
+<!-- Small enough to sit on the corner of the locate button without competing
+     with it: this hides the blue dot rather than moving the map. -->
+<button id="toggle-me" type="button" aria-pressed="true" aria-label="Hide my location">
+  <span aria-hidden="true"></span>
+</button>
+
 <!-- Account, top right, the corner every map app puts it in. Desktop only:
      on a phone the top bar already owns that corner, and the panel carries
      its own account row. -->
-<a id="profile-chip" href="account.html" aria-label="Account">
+<button id="profile-chip" type="button" aria-label="Account" aria-expanded="false" aria-haspopup="menu">
   <span id="profile-initial" aria-hidden="true"></span>
-</a>
+</button>
+
+<div id="profile-menu" class="hidden" role="menu" aria-labelledby="profile-chip">
+  <div id="menu-identity">
+    <span id="menu-email">Not signed in</span>
+  </div>
+
+  <a class="menu-item" href="account.html" role="menuitem">My walks</a>
+
+  <div class="menu-divider"></div>
+
+  <label class="menu-item menu-switch" role="menuitemcheckbox">
+    <span>Show my location</span>
+    <input id="show-me" type="checkbox" />
+    <span class="switch" aria-hidden="true"></span>
+  </label>
+
+  <div class="menu-divider"></div>
+
+  <button id="menu-auth" class="menu-item" type="button" role="menuitem">Sign in</button>
+</div>
 
 <div id="top-bar">
   <input id="journey-name" type="text" placeholder="Untitled journey" />
@@ -124,6 +172,14 @@
   </div>
 </div>
 
+<!-- Saved and Recents share one panel: both are a list of walks, and the only
+     difference is where the list comes from. -->
+<div id="library-panel" class="hidden">
+  <h2 id="library-title">Saved</h2>
+  <p id="library-note"></p>
+  <ul id="library-list"></ul>
+</div>
+
 <!-- Walk mode start gate -->
 <div id="start-overlay" class="hidden">
   <div id="start-panel">
@@ -138,6 +194,7 @@
 <script src="supabase-config.js"></script>
 <script src="engine.js"></script>
 <script src="auth.js"></script>
+<script src="library.js"></script>
 <script src="share.js"></script>
 <script src="recorder.js"></script>
 <script src="storage.js"></script>

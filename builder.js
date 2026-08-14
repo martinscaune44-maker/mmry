@@ -37,22 +37,25 @@ const map = L.map("map", { zoomControl: false }).setView([57.0810, 24.3198], 15)
 // with CSS offsets. Leaflet stacks whatever is in a corner in the order it was
 // added, so the two stay aligned even though the attribution shares the corner
 // and changes height when it wraps.
-const LocateControl = L.Control.extend({
-  onAdd() {
-    const button = document.getElementById("locate-me");
-    // Otherwise a click on the button also reaches the map, which in build
-    // mode drops a checkpoint under it.
-    L.DomEvent.disableClickPropagation(button);
-    return button;
-  },
-  onRemove() {},
-});
+function adoptControl(id) {
+  return L.Control.extend({
+    onAdd() {
+      const button = document.getElementById(id);
+      // Otherwise a click on the button also reaches the map, which in build
+      // mode drops a checkpoint under it.
+      L.DomEvent.disableClickPropagation(button);
+      return button;
+    },
+    onRemove() {},
+  });
+}
 
-// Zoom first, locate second. Leaflet inserts into a bottom corner in reverse —
-// each new control goes above the last — so this is the order that puts locate
-// on top, matching where Google Maps keeps it.
+// Zoom first, then locate, then the small hide-me toggle. Leaflet inserts into
+// a bottom corner in reverse — each new control goes above the last — so this
+// order reads, top to bottom: toggle, locate, zoom.
 L.control.zoom({ position: "bottomright" }).addTo(map);
-new LocateControl({ position: "bottomright" }).addTo(map);
+new (adoptControl("locate-me"))({ position: "bottomright" }).addTo(map);
+new (adoptControl("toggle-me"))({ position: "bottomright" }).addTo(map);
 
 // Light basemap. A dark map under dark chrome reads as one black smear and the
 // checkpoint circles vanish into it; every serious map app — Strava, Komoot,
@@ -189,10 +192,13 @@ function checkpointPopup(cp) {
   const wrap = document.createElement("div");
   wrap.className = "cp-popup";
 
+  const head = document.createElement("div");
+  head.className = "cp-popup-head";
+
   const name = document.createElement("span");
   name.className = "cp-popup-name";
   name.textContent = cp.name;
-  wrap.appendChild(name);
+  head.appendChild(name);
 
   if (mode === "build") {
     const del = document.createElement("button");
@@ -200,10 +206,61 @@ function checkpointPopup(cp) {
     del.className = "cp-popup-delete";
     del.textContent = "Delete";
     del.addEventListener("click", () => removeCheckpoint(cp.id));
-    wrap.appendChild(del);
+    head.appendChild(del);
   }
 
+  wrap.appendChild(head);
+
+  // The coordinates, and a way out to a real maps app — for checking a spot on
+  // satellite imagery, or getting directions to it before walking out there.
+  const coords = `${cp.lat.toFixed(6)}, ${cp.lng.toFixed(6)}`;
+
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "cp-popup-coords";
+  copy.textContent = coords;
+  copy.title = "Copy coordinates";
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(coords);
+      copy.textContent = "Copied";
+      setTimeout(() => (copy.textContent = coords), 1400);
+    } catch (_) {
+      // Clipboard access can be refused; showing them is the fallback.
+      copy.textContent = coords;
+    }
+  });
+
+  const external = mapsLinkFor(cp.lat, cp.lng, cp.name);
+  const open = document.createElement("a");
+  open.className = "cp-popup-open";
+  open.href = external.href;
+  open.target = "_blank";
+  open.rel = "noopener";
+  open.textContent = external.label;
+
+  wrap.append(copy, open);
   return wrap;
+}
+
+// Which maps app to offer. A "geo:" link is the correct Android answer and
+// opens whatever the person actually uses; Apple's own app is the right answer
+// on Apple hardware; everywhere else, Google Maps in a tab.
+function mapsLinkFor(lat, lng, name) {
+  const ua = navigator.userAgent;
+  const label = encodeURIComponent(name || "Checkpoint");
+  const coords = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+
+  if (/iPad|iPhone|iPod|Macintosh/.test(ua)) {
+    return { href: `https://maps.apple.com/?ll=${coords}&q=${label}`, label: "Open in Apple Maps" };
+  }
+  if (/Android/.test(ua)) {
+    return { href: `geo:${coords}?q=${coords}(${label})`, label: "Open in Maps" };
+  }
+  return {
+    href: `https://www.google.com/maps/search/?api=1&query=${coords}`,
+    label: "Open in Google Maps",
+  };
 }
 
 // Right-click on a desktop, press-and-hold on a phone. Both the pin and its
@@ -623,6 +680,9 @@ function setMode(next) {
   // The map controls sit above the panel on a phone, so they need to know when
   // the panel is gone — in walk mode the map has the whole screen.
   document.body.classList.toggle("panel-hidden", next !== "build");
+  // Walk mode does its own tracking, with its own rules — two watchers drawing
+  // two dots would fight over the same map.
+  applyShowMe();
 
   if (next === "build") {
     stopWalking();
@@ -815,6 +875,177 @@ el("clear-journey").addEventListener("click", () => {
   render();
 });
 
+// ---- Showing yourself while building ------------------------------------------
+//
+// Building is a thing you do standing outside, so where you are matters as much
+// as where the pins are. This runs only in build mode; walk mode has its own
+// tracking with different rules (it follows you, this does not).
+
+const SHOW_ME_KEY = "mmry.showMe";
+let showMe = localStorage.getItem(SHOW_ME_KEY) !== "off";
+let buildWatchId = null;
+let meMarker = null;
+let meAccuracy = null;
+
+function startShowingMe() {
+  if (buildWatchId !== null || !navigator.geolocation) return;
+
+  buildWatchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+
+      if (!meMarker) {
+        // The accuracy ring goes on first so the dot draws over it.
+        meAccuracy = L.circle([latitude, longitude], {
+          radius: accuracy,
+          color: "#2b7de9",
+          weight: 1,
+          fillOpacity: 0.06,
+          interactive: false,
+        }).addTo(map);
+
+        meMarker = L.circleMarker([latitude, longitude], {
+          radius: 8,
+          color: "#ffffff",
+          weight: 3,
+          fillColor: "#2b7de9",
+          fillOpacity: 1,
+          // Otherwise clicking your own dot drops a checkpoint underneath it.
+          interactive: false,
+        }).addTo(map);
+      } else {
+        meMarker.setLatLng([latitude, longitude]);
+        meAccuracy.setLatLng([latitude, longitude]).setRadius(accuracy);
+      }
+    },
+    (err) => {
+      // Quiet: a refused permission while building is not an error worth
+      // interrupting for. The locate button reports it if you ask directly.
+      console.warn("Could not follow position while building:", err);
+    },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+  );
+}
+
+function stopShowingMe() {
+  if (buildWatchId !== null) {
+    navigator.geolocation.clearWatch(buildWatchId);
+    buildWatchId = null;
+  }
+  if (meMarker) {
+    map.removeLayer(meMarker);
+    meMarker = null;
+  }
+  if (meAccuracy) {
+    map.removeLayer(meAccuracy);
+    meAccuracy = null;
+  }
+}
+
+function applyShowMe() {
+  const toggle = el("toggle-me");
+  const checkbox = el("show-me");
+  if (toggle) {
+    toggle.classList.toggle("off", !showMe);
+    toggle.setAttribute("aria-pressed", String(showMe));
+    toggle.setAttribute("aria-label", showMe ? "Hide my location" : "Show my location");
+    toggle.title = showMe ? "Hide my location" : "Show my location";
+  }
+  if (checkbox) checkbox.checked = showMe;
+
+  if (showMe && mode === "build") startShowingMe();
+  else stopShowingMe();
+}
+
+function setShowMe(next) {
+  showMe = next;
+  localStorage.setItem(SHOW_ME_KEY, next ? "on" : "off");
+  applyShowMe();
+}
+
+el("toggle-me").addEventListener("click", () => setShowMe(!showMe));
+el("show-me").addEventListener("change", () => setShowMe(el("show-me").checked));
+
+// ---- The rail -----------------------------------------------------------------
+
+let railView = "build";
+
+function setRailView(view) {
+  railView = view;
+  document.querySelectorAll(".rail-item[data-view]").forEach((item) => {
+    item.classList.toggle("active", item.dataset.view === view);
+  });
+
+  const building = view === "build";
+  el("build-panel").classList.toggle("library-open", !building);
+  el("library-panel").classList.toggle("hidden", building);
+
+  // Opening a list with the panel collapsed would show nothing at all.
+  if (!building) document.body.classList.remove("panel-collapsed");
+  if (!building) renderLibrary(view);
+}
+
+function renderLibrary(view) {
+  const saved = view === "saved";
+  const list = saved ? MmryLibrary.saved() : MmryLibrary.recents();
+
+  el("library-title").textContent = saved ? "Saved" : "Recently opened";
+  el("library-note").textContent = saved
+    ? "Walks you kept. Stored on this device."
+    : "Walks you've opened on this device.";
+
+  const host = el("library-list");
+  host.innerHTML = "";
+
+  if (list.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = saved
+      ? "Nothing saved yet. Open a walk someone sent you and tap Save."
+      : "Nothing opened yet.";
+    host.appendChild(empty);
+    return;
+  }
+
+  list.forEach((walk) => {
+    const li = document.createElement("li");
+
+    const link = document.createElement("a");
+    link.className = "library-name";
+    link.href = MmryShare.linkFor(walk.id);
+    link.textContent = walk.name || "Untitled journey";
+
+    const meta = document.createElement("span");
+    meta.className = "library-meta";
+    meta.textContent = walk.count ? `${walk.count} stop${walk.count === 1 ? "" : "s"}` : "";
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "library-remove";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", saved ? "Remove from saved" : "Remove from recents");
+    remove.addEventListener("click", () => {
+      if (saved) {
+        MmryLibrary.unsave(walk.id);
+      } else {
+        // Recents has no single-entry removal in storage, so rewrite the list
+        // without this one — the same thing, kept out of the library API since
+        // nothing else needs it.
+        const kept = MmryLibrary.recents().filter((w) => w.id !== walk.id);
+        localStorage.setItem(MmryLibrary.RECENTS_KEY, JSON.stringify(kept));
+      }
+      renderLibrary(view);
+    });
+
+    li.append(link, meta, remove);
+    host.appendChild(li);
+  });
+}
+
+document.querySelectorAll(".rail-item[data-view]").forEach((item) => {
+  item.addEventListener("click", () => setRailView(item.dataset.view));
+});
+
 function fitToCheckpoints() {
   if (journey.checkpoints.length === 0) return;
   const bounds = L.latLngBounds(journey.checkpoints.map((cp) => [cp.lat, cp.lng]));
@@ -839,6 +1070,7 @@ MmryStore.load(JOURNEY_ID)
   .finally(() => {
     renderAccountBar();
     renderTagChips();
+    applyShowMe();
   });
 
 // ---- Publishing ----------------------------------------------------------------
@@ -1218,7 +1450,42 @@ function renderProfileChip(user) {
     signedIn ? `Account — ${user.email || "signed in"}` : "Sign in"
   );
   chip.title = signedIn ? user.email || "My walks" : "Sign in";
+
+  el("menu-email").textContent = signedIn ? user.email || "Signed in" : "Not signed in";
+  el("menu-auth").textContent = signedIn ? "Sign out" : "Sign in";
 }
+
+// ---- Profile menu ------------------------------------------------------------
+
+function openProfileMenu(open) {
+  const menu = el("profile-menu");
+  menu.classList.toggle("hidden", !open);
+  el("profile-chip").setAttribute("aria-expanded", String(open));
+}
+
+el("profile-chip").addEventListener("click", (event) => {
+  event.stopPropagation();
+  openProfileMenu(el("profile-menu").classList.contains("hidden"));
+});
+
+// Anywhere else dismisses it, the way every menu does.
+document.addEventListener("click", (event) => {
+  if (!el("profile-menu").contains(event.target)) openProfileMenu(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") openProfileMenu(false);
+});
+
+el("menu-auth").addEventListener("click", async () => {
+  if (!MmryAuth.signedIn()) {
+    location.href = "account.html";
+    return;
+  }
+  await MmryAuth.signOut();
+  openProfileMenu(false);
+  renderAccountBar();
+});
 
 function renderTagChips() {
   const host = el("tag-chips");

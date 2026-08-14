@@ -11,7 +11,7 @@
 // Bump VERSION to retire old caches.
 // ---------------------------------------------------------------------------
 
-const VERSION = "v27";
+const VERSION = "v28";
 const SHELL_CACHE = `mmry-shell-${VERSION}`;
 const MEDIA_CACHE = `mmry-media-${VERSION}`;
 const TILE_CACHE = "mmry-tiles";
@@ -32,6 +32,7 @@ const SHELL_ASSETS = [
   "./walk.js",
   "./account.js",
   "./auth.js",
+  "./library.js",
   "./share.js",
   "./recorder.js",
   "./supabase-config.js",
