@@ -1042,9 +1042,139 @@ function renderLibrary(view) {
   });
 }
 
-document.querySelectorAll(".rail-item[data-view]").forEach((item) => {
+document.querySelectorAll("[data-view]").forEach((item) => {
   item.addEventListener("click", () => setRailView(item.dataset.view));
 });
+
+// The raised button in the middle of the tab bar. One tap does the whole loop
+// somebody is actually standing there to do: mark this spot, then record it.
+el("tab-add").addEventListener("click", () => {
+  if (!("geolocation" in navigator)) {
+    showLocationHelp("This browser doesn't support location.");
+    return;
+  }
+
+  el("tab-add").classList.add("busy");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      el("tab-add").classList.remove("busy");
+      addCheckpoint(pos.coords.latitude, pos.coords.longitude);
+      map.setView([pos.coords.latitude, pos.coords.longitude], 17);
+      setSheetSnap(1);
+      // The checkpoint just added is the last one.
+      const cp = journey.checkpoints[journey.checkpoints.length - 1];
+      if (cp && MmryRecorder.supported()) toggleRecording(cp.id);
+    },
+    (err) => {
+      el("tab-add").classList.remove("busy");
+      setSheetSnap(1);
+      showLocationHelp(explainLocationError(err));
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+});
+
+// ---- The sheet ------------------------------------------------------------------
+//
+// Building is a map task, and the panel was taking two thirds of a phone
+// screen to do it in. Three heights, dragged between: peek to see where you
+// are, half to work through the list, full to edit one closely. Every map app
+// converged on this because no single height is right for both placing a pin
+// and editing five checkpoints.
+
+// Fractions of the window height. They look small because the tab bar sits
+// under the sheet and the top bar over the map, so the sheet is not the only
+// thing taking room — at 0.45 the map still gets about 390px of a 932px phone,
+// against 341px for the fixed panel this replaces.
+const SNAPS = [0.18, 0.45, 0.82];
+let sheetSnap = 1;
+
+function sheetHeightFor(fraction) {
+  return Math.round(window.innerHeight * fraction);
+}
+
+function applySheetHeight(px, animate) {
+  const panel = el("build-panel");
+  panel.style.transition = animate ? "height 0.28s var(--ease)" : "none";
+  document.documentElement.style.setProperty("--sheet-h", `${px}px`);
+}
+
+function setSheetSnap(index, animate = true) {
+  sheetSnap = Math.max(0, Math.min(SNAPS.length - 1, index));
+  applySheetHeight(sheetHeightFor(SNAPS[sheetSnap]), animate);
+  el("sheet-handle").setAttribute("aria-valuenow", String(sheetSnap));
+}
+
+(function makeSheetDraggable() {
+  const handle = el("sheet-handle");
+  const panel = el("build-panel");
+  let startY = 0;
+  let startH = 0;
+  let dragging = false;
+  let moved = false;
+
+  handle.addEventListener("pointerdown", (event) => {
+    // Desktop has no sheet — the panel is a full-height column there.
+    if (window.innerWidth >= 900) return;
+    dragging = true;
+    moved = false;
+    startY = event.clientY;
+    startH = panel.getBoundingClientRect().height;
+    handle.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+
+  handle.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    // A few pixels of travel is a tap with a shaky thumb, not a drag.
+    if (Math.abs(event.clientY - startY) > 4) moved = true;
+    // Dragging up grows the sheet, so the delta is inverted.
+    const next = startH + (startY - event.clientY);
+    const min = sheetHeightFor(SNAPS[0]) * 0.6;
+    const max = sheetHeightFor(SNAPS[SNAPS.length - 1]);
+    applySheetHeight(Math.max(min, Math.min(max, next)), false);
+  });
+
+  const end = () => {
+    if (!dragging) return;
+    dragging = false;
+
+    // Snap to whichever height it ended up nearest, rather than wherever the
+    // finger happened to stop.
+    const current = panel.getBoundingClientRect().height;
+    let nearest = 0;
+    SNAPS.forEach((f, i) => {
+      if (Math.abs(sheetHeightFor(f) - current) < Math.abs(sheetHeightFor(SNAPS[nearest]) - current)) {
+        nearest = i;
+      }
+    });
+    setSheetSnap(nearest);
+  };
+
+  handle.addEventListener("pointerup", end);
+  handle.addEventListener("pointercancel", end);
+
+  // Keyboard, and a plain tap: cycle up, wrapping back to peek from full.
+  handle.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowUp") setSheetSnap(sheetSnap + 1);
+    else if (event.key === "ArrowDown") setSheetSnap(sheetSnap - 1);
+  });
+
+  // A pointerup always produces a click afterwards, so without this every drag
+  // would land on a snap and then immediately cycle off it again.
+  handle.addEventListener("click", () => {
+    if (window.innerWidth >= 900) return;
+    if (moved) {
+      moved = false;
+      return;
+    }
+    setSheetSnap(sheetSnap >= SNAPS.length - 1 ? 0 : sheetSnap + 1);
+  });
+
+  // Fractions of the window, so rotating the phone keeps the proportions.
+  window.addEventListener("resize", () => setSheetSnap(sheetSnap, false));
+  setSheetSnap(1, false);
+})();
 
 function fitToCheckpoints() {
   if (journey.checkpoints.length === 0) return;

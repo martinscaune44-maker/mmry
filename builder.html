@@ -98,8 +98,41 @@
   </div>
 </div>
 
+<!-- Phone navigation. The rail's job, in the shape a thumb can reach: tabs at
+     the bottom with the main action raised in the middle, the way Strava,
+     Instagram and every other app you already know puts it. -->
+<nav id="tabbar" aria-label="Sections">
+  <button class="tab active" type="button" data-view="build">
+    <span class="rail-icon icon-build" aria-hidden="true"></span>
+    <span class="tab-label">Build</span>
+  </button>
+  <button class="tab" type="button" data-view="saved">
+    <span class="rail-icon icon-saved" aria-hidden="true"></span>
+    <span class="tab-label">Saved</span>
+  </button>
+
+  <button id="tab-add" type="button" aria-label="Add a checkpoint here and record">
+    <span aria-hidden="true">+</span>
+  </button>
+
+  <button class="tab" type="button" data-view="recents">
+    <span class="rail-icon icon-recents" aria-hidden="true"></span>
+    <span class="tab-label">Recents</span>
+  </button>
+  <a class="tab" href="account.html">
+    <span class="rail-icon icon-mine" aria-hidden="true"></span>
+    <span class="tab-label">Mine</span>
+  </a>
+</nav>
+
 <!-- Build mode -->
 <div id="build-panel">
+  <!-- A real element rather than a pseudo-element: it has to be draggable. -->
+  <div id="sheet-handle" role="slider" aria-label="Resize panel"
+       aria-valuemin="0" aria-valuemax="2" aria-valuenow="1" tabindex="0">
+    <span aria-hidden="true"></span>
+  </div>
+
   <div id="account-bar">
     <span id="account-who">Not signed in</span>
     <a id="account-action" href="account.html">Sign in</a>
