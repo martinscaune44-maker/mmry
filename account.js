@@ -164,9 +164,11 @@ el("code-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!pendingCode) return;
 
+  // Six to ten digits: the length is a Supabase project setting, not a
+  // constant, and this one sends eight.
   const code = el("code").value.replace(/\D/g, "");
-  if (code.length !== 6) {
-    setCodeStatus("Enter the six digits from the email.", "warn");
+  if (code.length < 6) {
+    setCodeStatus("Enter the whole code from the email.", "warn");
     return;
   }
 
@@ -182,12 +184,21 @@ el("code-form").addEventListener("submit", async (event) => {
   });
 });
 
-// Six digits is the whole form, so waiting for a separate tap is pointless —
-// and on a phone the keyboard is covering the button anyway.
+// Submit on its own only when the whole code arrives at once — a paste, or the
+// keyboard offering it from the notification. Typing cannot be auto-submitted
+// without knowing how long the code is, and guessing would fire an error at
+// six digits of an eight-digit code, while somebody was still typing it.
+let lastCodeLength = 0;
+
 el("code").addEventListener("input", () => {
-  const digits = el("code").value.replace(/\D/g, "");
-  if (digits !== el("code").value) el("code").value = digits;
-  if (digits.length === 6) el("code-form").requestSubmit();
+  const field = el("code");
+  const digits = field.value.replace(/\D/g, "");
+  if (digits !== field.value) field.value = digits;
+
+  const arrivedWhole = digits.length - lastCodeLength >= 6;
+  lastCodeLength = digits.length;
+
+  if (arrivedWhole && digits.length >= 6) el("code-form").requestSubmit();
 });
 
 el("resend-code").addEventListener("click", async () => {
@@ -209,6 +220,7 @@ el("resend-code").addEventListener("click", async () => {
 el("code-back").addEventListener("click", () => {
   pendingCode = null;
   el("code").value = "";
+  lastCodeLength = 0;
   setCodeStatus("");
   showPanels();
 });

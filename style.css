@@ -2065,10 +2065,12 @@ body.account {
   color: var(--text);
   border-radius: var(--r-md);
   padding: 14px 16px;
-  /* Wide tracking and tabular figures so six digits read as six digits. */
-  font-size: 28px;
+  /* Tabular figures and wide tracking so a code reads as separate digits.
+     Tracking is modest because the code may be ten digits, not six, and wider
+     spacing would overflow a narrow phone. */
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: 0.32em;
+  letter-spacing: 0.22em;
   text-align: center;
   font-variant-numeric: tabular-nums;
   margin-bottom: 16px;

@@ -60,16 +60,18 @@
   <section id="code-panel" hidden>
     <h2 id="code-title">Check your email</h2>
     <p class="lede">
-      We sent a six-digit code to <strong id="code-email"></strong>. Type it
-      below — no link to tap, and no leaving this page.
+      We sent a code to <strong id="code-email"></strong>. Type it below — no
+      link to tap, and no leaving this page.
     </p>
 
     <form id="code-form">
       <label for="code">Code</label>
-      <!-- one-time-code lets iOS and Android offer it straight from the
-           notification, which is the whole point of using a code. -->
+      <!-- Length is a server setting and can be anywhere from 6 to 10 digits,
+           so nothing here assumes six. one-time-code lets iOS and Android offer
+           the code straight from the notification, which is the whole point of
+           using one. -->
       <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code"
-             pattern="[0-9]*" maxlength="6" placeholder="123456" />
+             pattern="[0-9]*" maxlength="10" placeholder="Paste or type it" />
       <button id="verify-code" type="submit">Confirm</button>
     </form>
 
