@@ -110,7 +110,17 @@ el("sign-up").addEventListener("click", async () => {
   setAuthStatus("");
   await withBusy(el("sign-up"), "Creating…", async () => {
     try {
-      const { codeRequired } = await MmryAuth.signUp(email, password);
+      const { codeRequired, alreadyRegistered } = await MmryAuth.signUp(email, password);
+
+      // Already registered is not an error worth stopping for — send a code
+      // and carry on, rather than making somebody work out which button they
+      // should have pressed.
+      if (alreadyRegistered) {
+        await startCodeFlow(email, "email", () => MmryAuth.sendSignInCode(email));
+        setCodeStatus("You already had an account, so this is a sign-in code.");
+        return;
+      }
+
       if (!codeRequired) {
         showPanels();
         return;

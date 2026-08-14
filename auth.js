@@ -161,8 +161,17 @@ const MmryAuth = {
   async signUp(email, password) {
     const payload = await this._post("signup", { email, password });
 
-    // With email confirmation on, signup returns a user but no session. The
-    // caller has to collect the code before there is anything to store.
+    // Signing up with an address that already has an account does not fail.
+    // Supabase answers with a decoy user so that nobody can probe which
+    // addresses are registered — and sends no email. Taken at face value that
+    // strands somebody on a code screen waiting for a code that will never
+    // arrive. An empty identities array is what gives the decoy away.
+    if (payload && Array.isArray(payload.identities) && payload.identities.length === 0) {
+      return { alreadyRegistered: true, email };
+    }
+
+    // With email confirmation on, a real signup returns a user but no session.
+    // The caller has to collect the code before there is anything to store.
     if (!payload || !payload.access_token) {
       return { codeRequired: true, email };
     }
